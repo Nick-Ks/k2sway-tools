@@ -1,0 +1,8 @@
+{
+  "name": "K2Sway Practice",
+  "description": "찬양대 및 워십팀을 위한 모바일 연습 도구 (메트로놈, 튜너, 보컬 피치 체크)",
+  "requestFramePermissions": [
+    "microphone"
+  ],
+  "majorCapabilities": []
+}
