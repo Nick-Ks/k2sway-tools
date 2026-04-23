@@ -25,9 +25,13 @@ export function usePitchCheck(referencePitch: number = 440) {
   const streamRef = useRef<MediaStream | null>(null);
   const animationFrameRef = useRef<number | null>(null);
 
-  // Smoothing buffers
+  // Smoothing buffers for Advanced DSP
   const freqBufferRef = useRef<number[]>([]);
-  const lastFreqRef = useRef(0);
+  const stableFreqRef = useRef(0);
+  const octaveJumpCountRef = useRef(0);
+  const lastNoteNameRef = useRef<string>('');
+  const notePersistenceCountRef = useRef(0);
+  const silenceCountRef = useRef(0);
 
   const isActiveRef = useRef(false);
 
@@ -48,7 +52,12 @@ export function usePitchCheck(referencePitch: number = 440) {
     }
     setIsActive(false);
     setPitchData(null);
+    
     freqBufferRef.current = [];
+    stableFreqRef.current = 0;
+    octaveJumpCountRef.current = 0;
+
+    if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'paused';
   }, []);
 
   const start = useCallback(async () => {
@@ -67,7 +76,7 @@ export function usePitchCheck(referencePitch: number = 440) {
       await audioContextRef.current.resume();
 
       analyserRef.current = audioContextRef.current.createAnalyser();
-      analyserRef.current.fftSize = 2048;
+      analyserRef.current.fftSize = 4096;
 
       const source = audioContextRef.current.createMediaStreamSource(stream);
       source.connect(analyserRef.current);
@@ -75,7 +84,6 @@ export function usePitchCheck(referencePitch: number = 440) {
       const detector = PitchDetector.forFloat32Array(analyserRef.current.fftSize);
       const input = new Float32Array(analyserRef.current.fftSize);
 
-      // Much lower sensitivity for voices
       const sensitivity = Number(localStorage.getItem('vocal_sensitivity')) || 0.40;
 
       const updatePitch = () => {
@@ -95,23 +103,69 @@ export function usePitchCheck(referencePitch: number = 440) {
         const lvl = Math.min(1, rms * 15); // Boost volume visual response
 
         if (clarity > sensitivity && pitch > 50 && pitch < 1200) {
+          silenceCountRef.current = 0;
+
+          // 1. Harmonic Rejection
+          if (stableFreqRef.current > 0) {
+            const ratio = pitch / stableFreqRef.current;
+            if ((ratio > 1.90 && ratio < 2.10) || (ratio > 0.45 && ratio < 0.55)) {
+              octaveJumpCountRef.current++;
+              // Vocals can have stronger harmonics, reject up to 10 frames (~160ms)
+              if (octaveJumpCountRef.current < 10) {
+                animationFrameRef.current = requestAnimationFrame(updatePitch);
+                return;
+              }
+            } else {
+              octaveJumpCountRef.current = 0;
+            }
+          }
+
+          // 2. Median Filter
           freqBufferRef.current.push(pitch);
           if (freqBufferRef.current.length > 5) freqBufferRef.current.shift();
-          const avgPitch = freqBufferRef.current.reduce((a, b) => a + b) / freqBufferRef.current.length;
+          
+          let medianPitch = pitch;
+          if (freqBufferRef.current.length >= 3) {
+            const sorted = [...freqBufferRef.current].sort((a, b) => a - b);
+            medianPitch = sorted[Math.floor(sorted.length / 2)];
+          }
 
-          // Stability: update UI only if frequency change is significant (> 1Hz)
-          if (Math.abs(avgPitch - lastFreqRef.current) > 1) {
-            const note = getNoteFromFrequency(avgPitch, referencePitch);
+          // 3. EMA Smoothing (Slower for Vocals to prevent twitching)
+          if (stableFreqRef.current === 0 || Math.abs(stableFreqRef.current - medianPitch) > stableFreqRef.current * 0.1) {
+            stableFreqRef.current = medianPitch;
+          } else {
+            // Alpha = 0.15 for even smoother vocal tracking
+            stableFreqRef.current = stableFreqRef.current * 0.85 + medianPitch * 0.15;
+          }
+
+          const smoothPitch = stableFreqRef.current;
+          const note = getNoteFromFrequency(smoothPitch, referencePitch);
+
+          // 4. Hysteresis
+          if (note.name === lastNoteNameRef.current) {
+            notePersistenceCountRef.current++;
+          } else {
+            lastNoteNameRef.current = note.name;
+            notePersistenceCountRef.current = 0;
+          }
+
+          if (notePersistenceCountRef.current >= 4) {
             setPitchData({ ...note, clarity, lvl });
-            setHistory(prev => [...prev.slice(-49), avgPitch]);
-            lastFreqRef.current = avgPitch;
+            setHistory(prev => [...prev.slice(-49), smoothPitch]);
           } else if (pitchData) {
-            // Update Volume even if frequency hasn't moved much
+            // Update Volume even if note hasn't switched yet
             setPitchData(p => p ? { ...p, lvl } : null);
           }
         } else {
           // If no pitch detected, still update volume if needed or clear
           setPitchData(p => p ? { ...p, lvl } : null);
+          
+          silenceCountRef.current++;
+          if (silenceCountRef.current > 30) {
+            stableFreqRef.current = 0;
+            freqBufferRef.current = [];
+            notePersistenceCountRef.current = 0;
+          }
         }
 
         animationFrameRef.current = requestAnimationFrame(updatePitch);
@@ -120,12 +174,24 @@ export function usePitchCheck(referencePitch: number = 440) {
       updatePitch();
       setIsActive(true);
       setError(null);
+
+      // Use Media Session API for status bar control
+      if ('mediaSession' in navigator) {
+        navigator.mediaSession.metadata = new MediaMetadata({
+          title: '보컬 피치 분석 중',
+          artist: 'K2Sway Music Tools',
+          album: '마이크 활성화됨'
+        });
+        navigator.mediaSession.setActionHandler('pause', () => {
+          stop();
+        });
+      }
     } catch (err) {
       setError('마이크 권한이 필요합니다.');
       setIsActive(false);
       isActiveRef.current = false;
     }
-  }, []);
+  }, [referencePitch, pitchData]);
 
   // Tone generation for reference notes (Sustain support)
   const oscillatorRef = useRef<OscillatorNode | null>(null);
@@ -174,7 +240,7 @@ export function usePitchCheck(referencePitch: number = 440) {
       stop();
       if (oscillatorRef.current) oscillatorRef.current.stop();
     };
-  }, []);
+  }, [stop]);
 
   return { pitchData, history, isActive, start, stop, error, startReferenceNote, stopReferenceNote };
 }

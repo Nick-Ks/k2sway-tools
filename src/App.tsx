@@ -5,7 +5,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Timer, Music, Mic2, Settings as SettingsIcon } from 'lucide-react';
+import { Timer, Music, TuningFork, Mic2, Settings as SettingsIcon } from 'lucide-react';
 import { ToolType } from './types.ts';
 import Metronome from './components/Metronome.tsx';
 import Tuner from './components/Tuner.tsx';
@@ -40,7 +40,7 @@ export default function App() {
 
   const navItems = [
     { id: 'metronome', label: '메트로놈', icon: Timer },
-    { id: 'tuner', label: '튜너', icon: Music },
+    { id: 'tuner', label: '튜너', icon: TuningFork },
     { id: 'pitch', label: '보컬 피치', icon: Mic2 },
     { id: 'settings', label: '설정', icon: SettingsIcon },
   ];

@@ -52,14 +52,14 @@ export function useTuner(referencePitch: number = 440, profileId: string = 'chro
   const oscillatorRef = useRef<OscillatorNode | null>(null);
   const gainRef = useRef<GainNode | null>(null);
 
-  // Settings
-  const sensitivity = Number(localStorage.getItem('tuner_sensitivity')) || 0.85;
-
-  // Buffer for smoothing
+  // Smoothing buffers for Advanced DSP
+  const freqBufferRef = useRef<number[]>([]);
   const centsBufferRef = useRef<number[]>([]);
-  const frequencyBufferRef = useRef<number[]>([]);
+  const stableFreqRef = useRef(0);
+  const octaveJumpCountRef = useRef(0);
   const lastNoteNameRef = useRef<string>('');
   const notePersistenceCountRef = useRef(0);
+  const silenceCountRef = useRef(0);
 
   const isActiveRef = useRef(false);
 
@@ -86,6 +86,13 @@ export function useTuner(referencePitch: number = 440, profileId: string = 'chro
     }
     setIsActive(false);
     setPitchData(null);
+    
+    // Reset buffers
+    freqBufferRef.current = [];
+    stableFreqRef.current = 0;
+    octaveJumpCountRef.current = 0;
+
+    if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'paused';
   }, []);
 
   const start = useCallback(async () => {
@@ -104,7 +111,7 @@ export function useTuner(referencePitch: number = 440, profileId: string = 'chro
       await audioContextRef.current.resume();
 
       analyserRef.current = audioContextRef.current.createAnalyser();
-      analyserRef.current.fftSize = 2048; 
+      analyserRef.current.fftSize = 4096; // Increased FFT size for better resolution at low frequencies
 
       sourceRef.current = audioContextRef.current.createMediaStreamSource(stream);
       sourceRef.current.connect(analyserRef.current);
@@ -112,8 +119,7 @@ export function useTuner(referencePitch: number = 440, profileId: string = 'chro
       const detector = PitchDetector.forFloat32Array(analyserRef.current.fftSize);
       const input = new Float32Array(analyserRef.current.fftSize);
 
-      // Much lower sensitivity for better responsiveness
-      const currentSensitivity = Number(localStorage.getItem('tuner_sensitivity')) || 0.45;
+      const currentSensitivity = Number(localStorage.getItem('tuner_sensitivity')) || 0.85;
 
       const updatePitch = () => {
         if (!isActiveRef.current || !analyserRef.current || !audioContextRef.current) return;
@@ -125,12 +131,48 @@ export function useTuner(referencePitch: number = 440, profileId: string = 'chro
         analyserRef.current.getFloatTimeDomainData(input);
         const [pitch, clarity] = detector.findPitch(input, audioContextRef.current.sampleRate);
 
-        if (clarity > currentSensitivity && pitch > 30 && pitch < 2000) {
-          frequencyBufferRef.current.push(pitch);
-          if (frequencyBufferRef.current.length > 3) frequencyBufferRef.current.shift();
-          const smoothPitch = frequencyBufferRef.current.reduce((a, b) => a + b) / frequencyBufferRef.current.length;
+        if (clarity > currentSensitivity && pitch > 20 && pitch < 2500) {
+          silenceCountRef.current = 0;
+
+          // 1. Harmonic Rejection (Octave Error Correction)
+          if (stableFreqRef.current > 0) {
+            const ratio = pitch / stableFreqRef.current;
+            // Check for +/- 1 octave jump (+/- 5% tolerance)
+            if ((ratio > 1.90 && ratio < 2.10) || (ratio > 0.45 && ratio < 0.55)) {
+              octaveJumpCountRef.current++;
+              // Ignore spurious octave jumps for up to 8 frames (~130ms)
+              if (octaveJumpCountRef.current < 8) {
+                animationFrameRef.current = requestAnimationFrame(updatePitch);
+                return;
+              }
+            } else {
+              octaveJumpCountRef.current = 0;
+            }
+          }
+
+          // 2. Median Filter (Size 5)
+          freqBufferRef.current.push(pitch);
+          if (freqBufferRef.current.length > 5) freqBufferRef.current.shift();
+          
+          let medianPitch = pitch;
+          if (freqBufferRef.current.length >= 3) {
+            const sorted = [...freqBufferRef.current].sort((a, b) => a - b);
+            medianPitch = sorted[Math.floor(sorted.length / 2)];
+          }
+
+          // 3. Exponential Moving Average (EMA)
+          // If jump is huge (not an octave), snap immediately. Otherwise smooth it.
+          if (stableFreqRef.current === 0 || Math.abs(stableFreqRef.current - medianPitch) > stableFreqRef.current * 0.1) {
+            stableFreqRef.current = medianPitch;
+          } else {
+            // Alpha = 0.2 means slower/smoother needle movement
+            stableFreqRef.current = stableFreqRef.current * 0.8 + medianPitch * 0.2;
+          }
+
+          const smoothPitch = stableFreqRef.current;
           const note = getNoteFromFrequency(smoothPitch, referencePitch);
 
+          // 4. Hysteresis (Note Stability)
           if (note.name === lastNoteNameRef.current) {
             notePersistenceCountRef.current++;
           } else {
@@ -138,13 +180,24 @@ export function useTuner(referencePitch: number = 440, profileId: string = 'chro
             notePersistenceCountRef.current = 0;
           }
 
-          if (notePersistenceCountRef.current >= 1) {
+          // Only update UI if note is stable for at least 3 frames
+          if (notePersistenceCountRef.current >= 3) {
             centsBufferRef.current.push(note.cents);
             if (centsBufferRef.current.length > 5) centsBufferRef.current.shift();
             const smoothCents = Math.round(centsBufferRef.current.reduce((a, b) => a + b) / centsBufferRef.current.length);
+            
             setPitchData({ ...note, cents: smoothCents, clarity });
           }
+        } else {
+          // Reset tracker if silent for too long (approx 500ms)
+          silenceCountRef.current++;
+          if (silenceCountRef.current > 30) {
+            stableFreqRef.current = 0;
+            freqBufferRef.current = [];
+            notePersistenceCountRef.current = 0;
+          }
         }
+        
         animationFrameRef.current = requestAnimationFrame(updatePitch);
       };
 
@@ -152,12 +205,24 @@ export function useTuner(referencePitch: number = 440, profileId: string = 'chro
       isActiveRef.current = true;
       setIsActive(true);
       setError(null);
+
+      // Use Media Session API for status bar control
+      if ('mediaSession' in navigator) {
+        navigator.mediaSession.metadata = new MediaMetadata({
+          title: '악기 튜너 작동 중',
+          artist: 'K2Sway Music Tools',
+          album: '마이크 활성화됨'
+        });
+        navigator.mediaSession.setActionHandler('pause', () => {
+          stop();
+        });
+      }
     } catch (err) {
       setError('마이크 권한이 필요합니다.');
       setIsActive(false);
       isActiveRef.current = false;
     }
-  }, []);
+  }, [referencePitch]);
 
   const startTone = useCallback((frequency: number) => {
     if (!audioContextRef.current) {
@@ -199,7 +264,7 @@ export function useTuner(referencePitch: number = 440, profileId: string = 'chro
       stop();
       stopTone();
     };
-  }, [stopTone]);
+  }, [stopTone, stop]);
 
   return { pitchData, isActive, start, stop, error, startTone, stopTone };
 }

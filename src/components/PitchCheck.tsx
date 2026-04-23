@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Mic, MicOff, Star, Heart, Volume2, Music, ChevronDown, ChevronUp } from 'lucide-react';
+import { Mic, MicOff, Star, Volume2, Music, ChevronDown, ChevronUp } from 'lucide-react';
 import { usePitchCheck } from '../hooks/usePitchCheck.ts';
 import { cn } from '../lib/utils.ts';
 
@@ -82,13 +82,13 @@ export default function PitchCheck() {
       {/* 1. Header */}
       <div className="flex flex-col gap-1 px-1 mb-6">
         <h2 className="text-sm font-semibold flex items-center gap-2 text-rose-400">
-           <Heart size={16} fill="currentColor" /> 보컬 피치 체크
+           <Mic size={16} fill="currentColor" /> 보컬 피치 체크
         </h2>
         <p className="text-[11px] text-slate-400 font-bold uppercase tracking-widest leading-none">Vocal Pitch Analysis</p>
       </div>
 
       {/* 2. Settings Area - Collapsible Reference Tone */}
-      <div className="bento-card mb-6 transition-all">
+      <div className="bento-card mb-4 transition-all">
         <button 
           onClick={() => setIsRefOpen(!isRefOpen)}
           className="w-full flex justify-between items-center px-5 py-4 rounded-3xl hover:bg-slate-800/20 transition-colors"
@@ -151,11 +151,41 @@ export default function PitchCheck() {
         </AnimatePresence>
       </div>
 
-      {/* 3. Main Context Area */}
+      {/* 3. Session Stats / Vocal Range Component (Moved up) */}
+      <div className="bento-card p-4 mb-4">
+         <div className="grid grid-cols-2 gap-3">
+            <div className="flex flex-col gap-1 p-3 bg-slate-950 rounded-[1.5rem] border border-slate-900 border-dashed">
+               <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest leading-none">Lowest Note</span>
+               {vocalRange ? (
+                 <div className="flex items-center">
+                    <span className="text-2xl font-black text-rose-400">
+                      {vocalRange.low.name}<span className="text-lg opacity-60 ml-0.5">{vocalRange.low.oct}</span>
+                    </span>
+                 </div>
+               ) : (
+                 <span className="text-sm font-black text-slate-800 italic uppercase tracking-tighter">None</span>
+               )}
+            </div>
+            <div className="flex flex-col gap-1 p-3 bg-slate-950 rounded-[1.5rem] border border-slate-900 border-dashed">
+               <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest leading-none">Highest Note</span>
+               {vocalRange ? (
+                 <div className="flex items-center">
+                    <span className="text-2xl font-black text-sky-400">
+                      {vocalRange.high.name}<span className="text-lg opacity-60 ml-0.5">{vocalRange.high.oct}</span>
+                    </span>
+                 </div>
+               ) : (
+                 <span className="text-sm font-black text-slate-800 italic uppercase tracking-tighter">None</span>
+               )}
+            </div>
+         </div>
+      </div>
+
+      {/* 4. Main Context Area */}
       <div className="flex-1 flex flex-col gap-4 overflow-hidden mb-6">
         {/* Monitor */}
         <div className={cn(
-          "flex-1 flex flex-col justify-center items-center rounded-[3.5rem] border transition-all duration-700 relative overflow-hidden min-h-[300px]",
+          "flex-1 flex flex-col justify-center items-center rounded-[3.5rem] border transition-all duration-700 relative overflow-hidden min-h-[200px]",
           isActive && inTune ? "bg-rose-500/[0.03] border-rose-500/30 shadow-[0_0_80px_rgba(244,63,94,0.05)_inset]" : "bg-slate-950 border-slate-900/50"
         )}>
           {/* Perfect Pitch Celebration Glow */}
@@ -165,13 +195,13 @@ export default function PitchCheck() {
             </div>
           )}
           {/* Analysis indicator */}
-          <div className="absolute top-4 left-1/2 -translate-x-1/2 flex items-center gap-2">
+          <div className="absolute top-4 left-1/2 -translate-x-1/2 flex items-center gap-2 z-10">
             <div className={cn("h-1.5 w-1.5 rounded-full", isActive ? "bg-emerald-400 animate-pulse shadow-[0_0_10px_#10b981]" : "bg-slate-900")} />
             <span className="text-[9px] font-black text-slate-800 uppercase tracking-widest leading-none">Vocal Tracking</span>
           </div>
 
           {/* Scrolling Scale */}
-          <div className="w-full relative h-32 flex items-center justify-center overflow-hidden mb-4 px-4">
+          <div className="w-full relative h-24 flex items-center justify-center overflow-hidden mb-2 px-4 z-10">
             {isActive && pitchData ? (
               <div className="relative w-full h-full flex items-center justify-center">
                 {/* Fixed Center Marker */}
@@ -206,7 +236,7 @@ export default function PitchCheck() {
                           className="absolute flex flex-col items-center"
                           style={{ opacity }}
                         >
-                          <div className={cn("h-16 w-[1.5px]", midi === currentMidi ? "bg-white" : "bg-slate-800")} />
+                          <div className={cn("h-12 w-[1.5px]", midi === currentMidi ? "bg-white" : "bg-slate-800")} />
                           <div className="flex flex-col items-center mt-2 px-2">
                              <span className={cn("text-lg font-black", midi === currentMidi ? "text-white" : "text-slate-600")}>{name}</span>
                              <span className="text-[9px] font-bold text-slate-800">{oct}</span>
@@ -223,95 +253,51 @@ export default function PitchCheck() {
           </div>
 
           {/* Large Text Feedback */}
-          <div className="flex flex-col items-center mt-2">
+          <div className="flex flex-col items-center z-10">
              <div className="flex items-baseline gap-2">
               <motion.span
                 animate={isActive && pitchData ? { scale: [1, 1.02, 1] } : {}}
                 transition={{ duration: 0.5 }}
                 className={cn(
-                  "text-[90px] font-black leading-none tracking-tighter transition-colors duration-300 drop-shadow-2xl",
+                  "text-[80px] font-black leading-none tracking-tighter transition-colors duration-300 drop-shadow-2xl",
                   isActive && pitchData && inTune ? "text-rose-400" : (isActive && pitchData ? "text-white" : "text-slate-900")
                 )}
               >
                 {noteName}
               </motion.span>
-              <span className="text-3xl font-bold text-rose-500/80">{octave}</span>
+              <span className="text-2xl font-bold text-rose-500/80">{octave}</span>
             </div>
 
-            <div className="h-10 flex flex-col items-center justify-center">
+            <div className="h-8 flex flex-col items-center justify-center">
                {isActive && pitchData && (
                  <div className="flex flex-col items-center">
                     <span className={cn(
-                      "text-3xl font-black tabular-nums tracking-tracking",
+                      "text-2xl font-black tabular-nums tracking-tracking",
                       inTune ? "text-emerald-400" : (cents > 0 ? "text-rose-400" : "text-sky-400")
                     )}>
                       {cents > 0 ? `+${cents}` : cents}
                     </span>
-                    <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mt-0.5">
-                       {inTune ? 'PERFECT PITCH' : (cents > 0 ? 'SLIGHTLY SHARP' : 'SLIGHTLY FLAT')}
-                    </p>
                  </div>
                )}
             </div>
           </div>
         </div>
-
-        {/* 6. Session Stats / Vocal Range Component */}
-        <div className="bento-card p-5 mt-4">
-           <div className="grid grid-cols-2 gap-4">
-              <div className="flex flex-col gap-2 p-4 bg-slate-950 rounded-3xl border border-slate-900 border-dashed">
-                 <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest leading-none">Lowest Note</span>
-                 {vocalRange ? (
-                   <div className="flex items-center gap-1.5">
-                      <span className="text-3xl font-black text-rose-400">{vocalRange.low.name}</span>
-                      <span className="px-1.5 py-0.5 bg-rose-500/10 rounded-md text-xs font-black text-rose-400/60">{vocalRange.low.oct}</span>
-                   </div>
-                 ) : (
-                   <span className="text-sm font-black text-slate-800 italic uppercase tracking-tighter">None</span>
-                 )}
-              </div>
-              <div className="flex flex-col gap-2 p-4 bg-slate-950 rounded-3xl border border-slate-900 border-dashed">
-                 <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest leading-none">Highest Note</span>
-                 {vocalRange ? (
-                   <div className="flex items-center gap-1.5">
-                      <span className="text-3xl font-black text-sky-400">{vocalRange.high.name}</span>
-                      <span className="px-1.5 py-0.5 bg-sky-500/10 rounded-md text-xs font-black text-sky-400/60">{vocalRange.high.oct}</span>
-                   </div>
-                 ) : (
-                   <span className="text-sm font-black text-slate-800 italic uppercase tracking-tighter">None</span>
-                 )}
-              </div>
-           </div>
-           
-           <div className="mt-4 pt-4 border-t border-slate-900 flex justify-between items-center px-2">
-              <div className="flex items-center gap-2">
-                 <div className="h-2 w-2 rounded-full bg-rose-500 animate-pulse" />
-                 <span className="text-[11px] font-bold text-slate-400 uppercase tracking-tight">Active Analysis</span>
-              </div>
-              <div className="flex items-baseline gap-1">
-                 <span className="text-[10px] font-black text-slate-600">PEAK</span>
-                 <span className="text-lg font-black text-slate-200 tabular-nums">{pitchData ? Math.round(pitchData.frequency) : 0}</span>
-                 <span className="text-[9px] font-black text-slate-600">Hz</span>
-              </div>
-           </div>
-        </div>
       </div>
 
-      {/* 4. Footer Controls */}
+      {/* 5. Footer Controls */}
       <div className="mt-auto">
         <button
           onClick={toggle}
           className={cn(
-            "w-full h-24 flex flex-col items-center justify-center gap-1 rounded-[2.5rem] transition-all shadow-2xl active:scale-95 group",
+            "w-full h-20 flex flex-col items-center justify-center gap-1 rounded-[2.5rem] transition-all shadow-2xl active:scale-95 group",
             isActive
               ? "bg-slate-800 text-rose-400 border border-rose-500/20"
               : "bg-rose-500 text-white shadow-rose-500/10"
           )}
         >
-          {isActive ? <MicOff size={32} /> : <Mic size={32} className="group-hover:scale-110 transition-transform" />}
-          <div className="flex flex-col items-center leading-none">
-            <span className="text-xl font-black tracking-tight uppercase">{isActive ? 'Stop Analysis' : 'Start Monitoring'}</span>
-            <span className="text-[10px] font-bold tracking-widest opacity-60 mt-1 uppercase leading-none">{isActive ? '분석 중지' : '분석 시작'}</span>
+          {isActive ? <MicOff size={28} /> : <Mic size={28} className="group-hover:scale-110 transition-transform" />}
+          <div className="flex flex-col items-center leading-none mt-1">
+            <span className="text-lg font-black tracking-tight uppercase">{isActive ? '분석 중지' : '분석 시작'}</span>
           </div>
         </button>
       </div>

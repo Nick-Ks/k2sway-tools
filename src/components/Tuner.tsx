@@ -5,7 +5,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
-import { Music, Mic, MicOff, AlertCircle, ChevronDown, CheckCircle2, Volume2 } from 'lucide-react';
+import { TuningFork, Mic, MicOff, AlertCircle, ChevronDown, CheckCircle2, Volume2 } from 'lucide-react';
 import { useTuner, INSTRUMENT_PROFILES, TuningProfile } from '../hooks/useTuner.ts';
 import { cn } from '../lib/utils.ts';
 import { CHROMATIC_FREQUENCIES, getNoteFromFrequency, NOTE_NAMES } from '../lib/pitchUtils.ts';
@@ -81,15 +81,16 @@ export default function Tuner() {
       <div className="flex justify-between items-center mb-6">
          <div className="flex flex-col">
            <h2 className="text-sm font-semibold flex items-center gap-2 text-amber-400">
-             <Music size={16} /> 악기 튜너
+             <TuningFork size={16} /> 악기 튜너
            </h2>
            <p className="text-[11px] text-slate-400 font-bold uppercase tracking-widest mt-1">Instrument Tuner</p>
          </div>
           <div className="relative">
             <button 
               onClick={() => setShowRefHz(!showRefHz)}
-              className="bg-slate-900 border border-slate-800 px-5 py-2.5 rounded-2xl text-[12px] font-black tracking-widest text-amber-400 shadow-sm flex items-center gap-2"
+              className="bg-slate-900 border border-amber-500/30 px-4 py-2.5 rounded-2xl text-[11px] font-black tracking-widest text-amber-400 shadow-[0_0_15px_rgba(245,158,11,0.1)] flex items-center gap-1.5 transition-all hover:bg-slate-800"
             >
+              <span className="text-[9px] opacity-70 border border-amber-400/30 px-1.5 py-0.5 rounded uppercase">보정됨</span>
               A4={refPitch}Hz <ChevronDown size={14} />
             </button>
             {showRefHz && (
