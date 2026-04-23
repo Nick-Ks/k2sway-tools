@@ -5,7 +5,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Timer, Music, TuningFork, Mic2, Settings as SettingsIcon } from 'lucide-react';
+import { Timer, Music, Mic2, Settings as SettingsIcon } from 'lucide-react';
+import { TuningFork } from './components/icons/TuningFork.tsx';
 import { ToolType } from './types.ts';
 import Metronome from './components/Metronome.tsx';
 import Tuner from './components/Tuner.tsx';

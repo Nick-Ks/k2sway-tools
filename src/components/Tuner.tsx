@@ -5,7 +5,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
-import { TuningFork, Mic, MicOff, AlertCircle, ChevronDown, CheckCircle2, Volume2 } from 'lucide-react';
+import { Mic, MicOff, AlertCircle, ChevronDown, CheckCircle2, Volume2 } from 'lucide-react';
+import { TuningFork } from './icons/TuningFork.tsx';
 import { useTuner, INSTRUMENT_PROFILES, TuningProfile } from '../hooks/useTuner.ts';
 import { cn } from '../lib/utils.ts';
 import { CHROMATIC_FREQUENCIES, getNoteFromFrequency, NOTE_NAMES } from '../lib/pitchUtils.ts';
