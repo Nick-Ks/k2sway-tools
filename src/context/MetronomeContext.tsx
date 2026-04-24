@@ -141,6 +141,7 @@ export function MetronomeProvider({ children }: { children: React.ReactNode }) {
 
     // Use Media Session API for status bar control
     if ('mediaSession' in navigator) {
+      navigator.mediaSession.playbackState = 'playing';
       navigator.mediaSession.metadata = new MediaMetadata({
         title: `Metronome - ${bpmRef.current} BPM`,
         artist: 'K2Sway Practice',
