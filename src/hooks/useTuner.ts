@@ -60,6 +60,7 @@ export function useTuner(referencePitch: number = 440, profileId: string = 'chro
   const lastNoteNameRef = useRef<string>('');
   const notePersistenceCountRef = useRef(0);
   const silenceCountRef = useRef(0);
+  const lastProcessedAtRef = useRef(0);
 
   const isActiveRef = useRef(false);
 
@@ -91,6 +92,7 @@ export function useTuner(referencePitch: number = 440, profileId: string = 'chro
     freqBufferRef.current = [];
     stableFreqRef.current = 0;
     octaveJumpCountRef.current = 0;
+    lastProcessedAtRef.current = 0;
 
     if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'paused';
   }, []);
@@ -120,6 +122,7 @@ export function useTuner(referencePitch: number = 440, profileId: string = 'chro
       const input = new Float32Array(analyserRef.current.fftSize);
 
       const currentSensitivity = Number(localStorage.getItem('tuner_sensitivity')) || 0.85;
+      const processIntervalMs = Math.min(120, Math.max(16, Number(localStorage.getItem('tuner_process_interval_ms')) || 40));
 
       const updatePitch = () => {
         if (!isActiveRef.current || !analyserRef.current || !audioContextRef.current) return;
@@ -127,6 +130,12 @@ export function useTuner(referencePitch: number = 440, profileId: string = 'chro
         if (audioContextRef.current.state === 'suspended') {
           audioContextRef.current.resume();
         }
+        const now = performance.now();
+        if (now - lastProcessedAtRef.current < processIntervalMs) {
+          animationFrameRef.current = requestAnimationFrame(updatePitch);
+          return;
+        }
+        lastProcessedAtRef.current = now;
 
         analyserRef.current.getFloatTimeDomainData(input);
         const [pitch, clarity] = detector.findPitch(input, audioContextRef.current.sampleRate);
@@ -152,7 +161,7 @@ export function useTuner(referencePitch: number = 440, profileId: string = 'chro
 
           // 2. Median Filter (Size 5)
           freqBufferRef.current.push(pitch);
-          if (freqBufferRef.current.length > 5) freqBufferRef.current.shift();
+          if (freqBufferRef.current.length > 7) freqBufferRef.current.shift();
           
           let medianPitch = pitch;
           if (freqBufferRef.current.length >= 3) {
@@ -208,6 +217,7 @@ export function useTuner(referencePitch: number = 440, profileId: string = 'chro
 
       // Use Media Session API for status bar control
       if ('mediaSession' in navigator) {
+        navigator.mediaSession.playbackState = 'playing';
         navigator.mediaSession.metadata = new MediaMetadata({
           title: '악기 튜너 작동 중',
           artist: 'K2Sway Music Tools',

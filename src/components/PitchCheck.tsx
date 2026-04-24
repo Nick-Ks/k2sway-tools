@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Mic, MicOff, Star, Volume2, Music, ChevronDown, ChevronUp } from 'lucide-react';
 import { usePitchCheck } from '../hooks/usePitchCheck.ts';
 import { cn } from '../lib/utils.ts';
+import { getNotationPreference, getNoteLabel } from '../lib/pitchUtils.ts';
 
 const NOTES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
 const OCTAVES = [2, 3, 4, 5];
@@ -74,6 +75,8 @@ export default function PitchCheck() {
 
   const cents = pitchData?.cents || 0;
   const noteName = pitchData?.name || '-';
+  const notation = getNotationPreference();
+  const displayNoteName = pitchData ? getNoteLabel(noteName, notation) : noteName;
   const octave = pitchData?.octave !== undefined ? pitchData.octave : '';
   const inTune = Math.abs(cents) <= 8;
 
@@ -140,8 +143,8 @@ export default function PitchCheck() {
                           : "bg-slate-950 border-slate-900 text-slate-400 hover:bg-slate-800"
                       )}
                     >
-                      <span className="text-sm font-black leading-none uppercase">{n}</span>
-                      <span className="text-[9px] font-black opacity-40 uppercase mt-1.5">{selectedOctave}</span>
+                      <span className="text-sm font-black leading-none">{getNoteLabel(n, notation)}</span>
+                      <span className="text-[9px] font-black opacity-60 mt-1.5">옥타브 {selectedOctave}</span>
                     </button>
                   ))}
                 </div>
@@ -159,7 +162,7 @@ export default function PitchCheck() {
                {vocalRange ? (
                  <div className="flex items-center">
                     <span className="text-2xl font-black text-rose-400">
-                      {vocalRange.low.name}<span className="text-lg opacity-60 ml-0.5">{vocalRange.low.oct}</span>
+                      {getNoteLabel(vocalRange.low.name, notation)}<span className="text-sm opacity-70 ml-1">옥타브 {vocalRange.low.oct}</span>
                     </span>
                  </div>
                ) : (
@@ -171,7 +174,7 @@ export default function PitchCheck() {
                {vocalRange ? (
                  <div className="flex items-center">
                     <span className="text-2xl font-black text-sky-400">
-                      {vocalRange.high.name}<span className="text-lg opacity-60 ml-0.5">{vocalRange.high.oct}</span>
+                      {getNoteLabel(vocalRange.high.name, notation)}<span className="text-sm opacity-70 ml-1">옥타브 {vocalRange.high.oct}</span>
                     </span>
                  </div>
                ) : (
@@ -223,7 +226,7 @@ export default function PitchCheck() {
                     return notesToShow.map((midi) => {
                       const noteIdx = midi % 12;
                       const oct = Math.floor(midi / 12) - 1;
-                      const name = NOTES[noteIdx];
+                      const name = getNoteLabel(NOTES[noteIdx], notation);
                       const diffInCents = (midi - currentMidi) * 100 - cents;
                       const x = mapCentsToX(diffInCents);
                       const opacity = Math.max(0, 1 - Math.abs(diffInCents) / 250);
@@ -263,9 +266,9 @@ export default function PitchCheck() {
                   isActive && pitchData && inTune ? "text-rose-400" : (isActive && pitchData ? "text-white" : "text-slate-900")
                 )}
               >
-                {noteName}
+                {displayNoteName}
               </motion.span>
-              <span className="text-2xl font-bold text-rose-500/80">{octave}</span>
+              <span className="text-xl font-bold text-rose-500/80">옥타브 {octave}</span>
             </div>
 
             <div className="h-8 flex flex-col items-center justify-center">

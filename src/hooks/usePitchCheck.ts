@@ -32,6 +32,7 @@ export function usePitchCheck(referencePitch: number = 440) {
   const lastNoteNameRef = useRef<string>('');
   const notePersistenceCountRef = useRef(0);
   const silenceCountRef = useRef(0);
+  const lastProcessedAtRef = useRef(0);
 
   const isActiveRef = useRef(false);
 
@@ -56,6 +57,7 @@ export function usePitchCheck(referencePitch: number = 440) {
     freqBufferRef.current = [];
     stableFreqRef.current = 0;
     octaveJumpCountRef.current = 0;
+    lastProcessedAtRef.current = 0;
 
     if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'paused';
   }, []);
@@ -85,6 +87,7 @@ export function usePitchCheck(referencePitch: number = 440) {
       const input = new Float32Array(analyserRef.current.fftSize);
 
       const sensitivity = Number(localStorage.getItem('vocal_sensitivity')) || 0.40;
+      const processIntervalMs = Math.min(120, Math.max(16, Number(localStorage.getItem('vocal_process_interval_ms')) || 45));
 
       const updatePitch = () => {
         if (!isActiveRef.current || !analyserRef.current || !audioContextRef.current) return;
@@ -92,6 +95,12 @@ export function usePitchCheck(referencePitch: number = 440) {
         if (audioContextRef.current.state === 'suspended') {
           audioContextRef.current.resume();
         }
+        const now = performance.now();
+        if (now - lastProcessedAtRef.current < processIntervalMs) {
+          animationFrameRef.current = requestAnimationFrame(updatePitch);
+          return;
+        }
+        lastProcessedAtRef.current = now;
 
         analyserRef.current.getFloatTimeDomainData(input);
         const [pitch, clarity] = detector.findPitch(input, audioContextRef.current.sampleRate);
@@ -122,7 +131,7 @@ export function usePitchCheck(referencePitch: number = 440) {
 
           // 2. Median Filter
           freqBufferRef.current.push(pitch);
-          if (freqBufferRef.current.length > 5) freqBufferRef.current.shift();
+          if (freqBufferRef.current.length > 7) freqBufferRef.current.shift();
           
           let medianPitch = pitch;
           if (freqBufferRef.current.length >= 3) {
@@ -177,6 +186,7 @@ export function usePitchCheck(referencePitch: number = 440) {
 
       // Use Media Session API for status bar control
       if ('mediaSession' in navigator) {
+        navigator.mediaSession.playbackState = 'playing';
         navigator.mediaSession.metadata = new MediaMetadata({
           title: '보컬 피치 분석 중',
           artist: 'K2Sway Music Tools',
