@@ -6,6 +6,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { PitchDetector } from 'pitchy';
 import { getNoteFromFrequency } from '../lib/pitchUtils.ts';
+import { startMediaSessionIndicator, stopMediaSessionIndicator } from '../lib/mediaSession.ts';
 
 export function usePitchCheck(referencePitch: number = 440) {
   const [pitchData, setPitchData] = useState<{
@@ -32,6 +33,9 @@ export function usePitchCheck(referencePitch: number = 440) {
   const lastNoteNameRef = useRef<string>('');
   const notePersistenceCountRef = useRef(0);
   const silenceCountRef = useRef(0);
+  const lastProcessedAtRef = useRef(0);
+  const detectedFramesRef = useRef(0);
+  const hasLockedRef = useRef(false);
 
   const isActiveRef = useRef(false);
 
@@ -56,8 +60,11 @@ export function usePitchCheck(referencePitch: number = 440) {
     freqBufferRef.current = [];
     stableFreqRef.current = 0;
     octaveJumpCountRef.current = 0;
+    lastProcessedAtRef.current = 0;
+    detectedFramesRef.current = 0;
+    hasLockedRef.current = false;
 
-    if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'paused';
+    stopMediaSessionIndicator();
   }, []);
 
   const start = useCallback(async () => {
@@ -76,7 +83,7 @@ export function usePitchCheck(referencePitch: number = 440) {
       await audioContextRef.current.resume();
 
       analyserRef.current = audioContextRef.current.createAnalyser();
-      analyserRef.current.fftSize = 4096;
+      analyserRef.current.fftSize = 2048;
 
       const source = audioContextRef.current.createMediaStreamSource(stream);
       source.connect(analyserRef.current);
@@ -85,6 +92,7 @@ export function usePitchCheck(referencePitch: number = 440) {
       const input = new Float32Array(analyserRef.current.fftSize);
 
       const sensitivity = Number(localStorage.getItem('vocal_sensitivity')) || 0.40;
+      const processIntervalMs = Math.min(36, Math.max(12, Number(localStorage.getItem('vocal_process_interval_ms')) || 22));
 
       const updatePitch = () => {
         if (!isActiveRef.current || !analyserRef.current || !audioContextRef.current) return;
@@ -92,6 +100,12 @@ export function usePitchCheck(referencePitch: number = 440) {
         if (audioContextRef.current.state === 'suspended') {
           audioContextRef.current.resume();
         }
+        const now = performance.now();
+        if (now - lastProcessedAtRef.current < processIntervalMs) {
+          animationFrameRef.current = requestAnimationFrame(updatePitch);
+          return;
+        }
+        lastProcessedAtRef.current = now;
 
         analyserRef.current.getFloatTimeDomainData(input);
         const [pitch, clarity] = detector.findPitch(input, audioContextRef.current.sampleRate);
@@ -148,11 +162,13 @@ export function usePitchCheck(referencePitch: number = 440) {
             lastNoteNameRef.current = note.name;
             notePersistenceCountRef.current = 0;
           }
-
-          if (notePersistenceCountRef.current >= 4) {
+          detectedFramesRef.current++;
+          const requiredPersistence = hasLockedRef.current ? 2 : 0;
+          if (notePersistenceCountRef.current >= requiredPersistence) {
+            hasLockedRef.current = true;
             setPitchData({ ...note, clarity, lvl });
             setHistory(prev => [...prev.slice(-49), smoothPitch]);
-          } else if (pitchData) {
+          } else if (hasLockedRef.current) {
             // Update Volume even if note hasn't switched yet
             setPitchData(p => p ? { ...p, lvl } : null);
           }
@@ -165,6 +181,8 @@ export function usePitchCheck(referencePitch: number = 440) {
             stableFreqRef.current = 0;
             freqBufferRef.current = [];
             notePersistenceCountRef.current = 0;
+            detectedFramesRef.current = 0;
+            hasLockedRef.current = false;
           }
         }
 
@@ -175,23 +193,17 @@ export function usePitchCheck(referencePitch: number = 440) {
       setIsActive(true);
       setError(null);
 
-      // Use Media Session API for status bar control
-      if ('mediaSession' in navigator) {
-        navigator.mediaSession.metadata = new MediaMetadata({
-          title: '보컬 피치 분석 중',
-          artist: 'K2Sway Music Tools',
-          album: '마이크 활성화됨'
-        });
-        navigator.mediaSession.setActionHandler('pause', () => {
-          stop();
-        });
-      }
+      // Use Media Session + silent indicator audio for status bar visibility
+      startMediaSessionIndicator(
+        { title: '보컬 피치 분석 중', artist: 'K2Sway Music Tools', album: '마이크 활성화됨' },
+        stop
+      );
     } catch (err) {
       setError('마이크 권한이 필요합니다.');
       setIsActive(false);
       isActiveRef.current = false;
     }
-  }, [referencePitch, pitchData]);
+  }, [referencePitch, stop]);
 
   // Tone generation for reference notes (Sustain support)
   const oscillatorRef = useRef<OscillatorNode | null>(null);

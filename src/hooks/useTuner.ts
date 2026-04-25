@@ -6,6 +6,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { PitchDetector } from 'pitchy';
 import { getNoteFromFrequency } from '../lib/pitchUtils.ts';
+import { startMediaSessionIndicator, stopMediaSessionIndicator } from '../lib/mediaSession.ts';
 
 export type InstrumentType = 'chromatic' | 'guitar' | 'bass' | 'ukulele' | 'violin' | 'cello';
 
@@ -60,6 +61,8 @@ export function useTuner(referencePitch: number = 440, profileId: string = 'chro
   const lastNoteNameRef = useRef<string>('');
   const notePersistenceCountRef = useRef(0);
   const silenceCountRef = useRef(0);
+  const lastProcessedAtRef = useRef(0);
+  const hasLockedRef = useRef(false);
 
   const isActiveRef = useRef(false);
 
@@ -91,8 +94,10 @@ export function useTuner(referencePitch: number = 440, profileId: string = 'chro
     freqBufferRef.current = [];
     stableFreqRef.current = 0;
     octaveJumpCountRef.current = 0;
+    lastProcessedAtRef.current = 0;
+    hasLockedRef.current = false;
 
-    if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'paused';
+    stopMediaSessionIndicator();
   }, []);
 
   const start = useCallback(async () => {
@@ -111,7 +116,7 @@ export function useTuner(referencePitch: number = 440, profileId: string = 'chro
       await audioContextRef.current.resume();
 
       analyserRef.current = audioContextRef.current.createAnalyser();
-      analyserRef.current.fftSize = 4096; // Increased FFT size for better resolution at low frequencies
+      analyserRef.current.fftSize = 2048; // Lower latency while keeping enough resolution
 
       sourceRef.current = audioContextRef.current.createMediaStreamSource(stream);
       sourceRef.current.connect(analyserRef.current);
@@ -120,6 +125,7 @@ export function useTuner(referencePitch: number = 440, profileId: string = 'chro
       const input = new Float32Array(analyserRef.current.fftSize);
 
       const currentSensitivity = Number(localStorage.getItem('tuner_sensitivity')) || 0.85;
+      const processIntervalMs = Math.min(36, Math.max(10, Number(localStorage.getItem('tuner_process_interval_ms')) || 20));
 
       const updatePitch = () => {
         if (!isActiveRef.current || !analyserRef.current || !audioContextRef.current) return;
@@ -127,6 +133,12 @@ export function useTuner(referencePitch: number = 440, profileId: string = 'chro
         if (audioContextRef.current.state === 'suspended') {
           audioContextRef.current.resume();
         }
+        const now = performance.now();
+        if (now - lastProcessedAtRef.current < processIntervalMs) {
+          animationFrameRef.current = requestAnimationFrame(updatePitch);
+          return;
+        }
+        lastProcessedAtRef.current = now;
 
         analyserRef.current.getFloatTimeDomainData(input);
         const [pitch, clarity] = detector.findPitch(input, audioContextRef.current.sampleRate);
@@ -180,10 +192,12 @@ export function useTuner(referencePitch: number = 440, profileId: string = 'chro
             notePersistenceCountRef.current = 0;
           }
 
-          // Only update UI if note is stable for at least 3 frames
-          if (notePersistenceCountRef.current >= 3) {
+          // Fast first lock, then normal hysteresis
+          const requiredPersistence = hasLockedRef.current ? 2 : 0;
+          if (notePersistenceCountRef.current >= requiredPersistence) {
+            hasLockedRef.current = true;
             centsBufferRef.current.push(note.cents);
-            if (centsBufferRef.current.length > 5) centsBufferRef.current.shift();
+            if (centsBufferRef.current.length > 3) centsBufferRef.current.shift();
             const smoothCents = Math.round(centsBufferRef.current.reduce((a, b) => a + b) / centsBufferRef.current.length);
             
             setPitchData({ ...note, cents: smoothCents, clarity });
@@ -195,6 +209,7 @@ export function useTuner(referencePitch: number = 440, profileId: string = 'chro
             stableFreqRef.current = 0;
             freqBufferRef.current = [];
             notePersistenceCountRef.current = 0;
+            hasLockedRef.current = false;
           }
         }
         
@@ -206,17 +221,10 @@ export function useTuner(referencePitch: number = 440, profileId: string = 'chro
       setIsActive(true);
       setError(null);
 
-      // Use Media Session API for status bar control
-      if ('mediaSession' in navigator) {
-        navigator.mediaSession.metadata = new MediaMetadata({
-          title: '악기 튜너 작동 중',
-          artist: 'K2Sway Music Tools',
-          album: '마이크 활성화됨'
-        });
-        navigator.mediaSession.setActionHandler('pause', () => {
-          stop();
-        });
-      }
+      startMediaSessionIndicator(
+        { title: '악기 튜너 작동 중', artist: 'K2Sway Music Tools', album: '마이크 활성화됨' },
+        stop
+      );
     } catch (err) {
       setError('마이크 권한이 필요합니다.');
       setIsActive(false);

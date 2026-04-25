@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useRef, useCallback, useEffect } from 'react';
+import { startMediaSessionIndicator, stopMediaSessionIndicator } from '../lib/mediaSession.ts';
 
 interface MetronomeState {
   bpm: number;
@@ -139,22 +140,17 @@ export function MetronomeProvider({ children }: { children: React.ReactNode }) {
     beatRef.current = 0;
     scheduler();
 
-    // Use Media Session API for status bar control
-    if ('mediaSession' in navigator) {
-      navigator.mediaSession.metadata = new MediaMetadata({
-        title: `Metronome - ${bpmRef.current} BPM`,
-        artist: 'K2Sway Practice',
-        album: 'Rehearsal Tools'
-      });
-      navigator.mediaSession.setActionHandler('pause', stop);
-    }
+    startMediaSessionIndicator(
+      { title: `Metronome - ${bpmRef.current} BPM`, artist: 'K2Sway Practice', album: 'Rehearsal Tools' },
+      stop
+    );
   }, [scheduler]);
 
   const stop = useCallback(() => {
     setIsPlaying(false);
     isPlayingRef.current = false;
     if (timerIDRef.current) clearTimeout(timerIDRef.current);
-    if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'paused';
+    stopMediaSessionIndicator();
   }, []);
 
   const toggle = useCallback(() => {
