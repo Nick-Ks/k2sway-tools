@@ -62,7 +62,6 @@ export function useTuner(referencePitch: number = 440, profileId: string = 'chro
   const notePersistenceCountRef = useRef(0);
   const silenceCountRef = useRef(0);
   const lastProcessedAtRef = useRef(0);
-  const hasLockedRef = useRef(false);
 
   const isActiveRef = useRef(false);
 
@@ -95,7 +94,6 @@ export function useTuner(referencePitch: number = 440, profileId: string = 'chro
     stableFreqRef.current = 0;
     octaveJumpCountRef.current = 0;
     lastProcessedAtRef.current = 0;
-    hasLockedRef.current = false;
 
     stopMediaSessionIndicator();
   }, []);
@@ -125,7 +123,7 @@ export function useTuner(referencePitch: number = 440, profileId: string = 'chro
       const input = new Float32Array(analyserRef.current.fftSize);
 
       const currentSensitivity = Number(localStorage.getItem('tuner_sensitivity')) || 0.85;
-      const processIntervalMs = Math.min(36, Math.max(10, Number(localStorage.getItem('tuner_process_interval_ms')) || 20));
+      const processIntervalMs = Math.min(120, Math.max(16, Number(localStorage.getItem('tuner_process_interval_ms')) || 40));
 
       const updatePitch = () => {
         if (!isActiveRef.current || !analyserRef.current || !audioContextRef.current) return;
@@ -164,7 +162,7 @@ export function useTuner(referencePitch: number = 440, profileId: string = 'chro
 
           // 2. Median Filter (Size 5)
           freqBufferRef.current.push(pitch);
-          if (freqBufferRef.current.length > 5) freqBufferRef.current.shift();
+          if (freqBufferRef.current.length > 7) freqBufferRef.current.shift();
           
           let medianPitch = pitch;
           if (freqBufferRef.current.length >= 3) {
@@ -221,10 +219,18 @@ export function useTuner(referencePitch: number = 440, profileId: string = 'chro
       setIsActive(true);
       setError(null);
 
-      startMediaSessionIndicator(
-        { title: '악기 튜너 작동 중', artist: 'K2Sway Music Tools', album: '마이크 활성화됨' },
-        stop
-      );
+      // Use Media Session API for status bar control
+      if ('mediaSession' in navigator) {
+        navigator.mediaSession.playbackState = 'playing';
+        navigator.mediaSession.metadata = new MediaMetadata({
+          title: '악기 튜너 작동 중',
+          artist: 'K2Sway Music Tools',
+          album: '마이크 활성화됨'
+        });
+        navigator.mediaSession.setActionHandler('pause', () => {
+          stop();
+        });
+      }
     } catch (err) {
       setError('마이크 권한이 필요합니다.');
       setIsActive(false);

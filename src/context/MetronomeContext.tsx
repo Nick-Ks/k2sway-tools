@@ -140,10 +140,16 @@ export function MetronomeProvider({ children }: { children: React.ReactNode }) {
     beatRef.current = 0;
     scheduler();
 
-    startMediaSessionIndicator(
-      { title: `Metronome - ${bpmRef.current} BPM`, artist: 'K2Sway Practice', album: 'Rehearsal Tools' },
-      stop
-    );
+    // Use Media Session API for status bar control
+    if ('mediaSession' in navigator) {
+      navigator.mediaSession.playbackState = 'playing';
+      navigator.mediaSession.metadata = new MediaMetadata({
+        title: `Metronome - ${bpmRef.current} BPM`,
+        artist: 'K2Sway Practice',
+        album: 'Rehearsal Tools'
+      });
+      navigator.mediaSession.setActionHandler('pause', stop);
+    }
   }, [scheduler]);
 
   const stop = useCallback(() => {
