@@ -44,13 +44,6 @@ export default function Tuner() {
     };
   }, [stop]);
 
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      stop();
-    };
-  }, [stop]);
-
   const cents = pitchData?.cents || 0;
   const noteName = pitchData?.name || '-';
   const notation = getNotationPreference();
@@ -69,7 +62,6 @@ export default function Tuner() {
     const freq = refPitch * Math.pow(2, (semitones - 69) / 12);
     
     startTone(freq);
-    setTimeout(stopTone, 1500);
   };
 
   const handleRefSelect = (hz: number) => {

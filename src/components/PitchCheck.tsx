@@ -9,7 +9,7 @@ const NOTES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
 const OCTAVES = [2, 3, 4, 5];
 
 export default function PitchCheck() {
-  const [selectedOctave, setSelectedOctave] = useState(4);
+  const [selectedOctave, setSelectedOctave] = useState(3);
   const [selectedNoteIndex, setSelectedNoteIndex] = useState(0);
   const [isRefOpen, setIsRefOpen] = useState(false);
   const [refPitch] = useState(() => Number(localStorage.getItem('m_ref_freq')) || 440);
@@ -25,8 +25,8 @@ export default function PitchCheck() {
   } = usePitchCheck(refPitch);
 
   const [vocalRange, setVocalRange] = useState<{ 
-    low: { name: string, oct: number, freq: number }, 
-    high: { name: string, oct: number, freq: number } 
+    low: { name: string, octave: number, freq: number }, 
+    high: { name: string, octave: number, freq: number } 
   } | null>(null);
 
   React.useEffect(() => {
@@ -35,14 +35,19 @@ export default function PitchCheck() {
       const freq = 440 * Math.pow(2, (midi - 69) / 12);
       
       setVocalRange(prev => {
-        if (!prev) return { low: { ...pitchData, freq }, high: { ...pitchData, freq } };
+        if (!prev) {
+          return {
+            low: { name: pitchData.name, octave: pitchData.octave, freq },
+            high: { name: pitchData.name, octave: pitchData.octave, freq }
+          };
+        }
         
         const newRange = { ...prev };
-        const lowMidi = (prev.low.oct + 1) * 12 + NOTES.indexOf(prev.low.name);
-        const highMidi = (prev.high.oct + 1) * 12 + NOTES.indexOf(prev.high.name);
+        const lowMidi = (prev.low.octave + 1) * 12 + NOTES.indexOf(prev.low.name);
+        const highMidi = (prev.high.octave + 1) * 12 + NOTES.indexOf(prev.high.name);
         
-        if (midi < lowMidi) newRange.low = { ...pitchData, freq };
-        if (midi > highMidi) newRange.high = { ...pitchData, freq };
+        if (midi < lowMidi) newRange.low = { name: pitchData.name, octave: pitchData.octave, freq };
+        if (midi > highMidi) newRange.high = { name: pitchData.name, octave: pitchData.octave, freq };
         
         return newRange;
       });

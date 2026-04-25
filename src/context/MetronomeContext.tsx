@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useRef, useCallback, useEffect } from 'react';
+import { startMediaSessionIndicator, stopMediaSessionIndicator } from '../lib/mediaSession.ts';
 
 interface MetronomeState {
   bpm: number;
@@ -155,7 +156,7 @@ export function MetronomeProvider({ children }: { children: React.ReactNode }) {
     setIsPlaying(false);
     isPlayingRef.current = false;
     if (timerIDRef.current) clearTimeout(timerIDRef.current);
-    if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'paused';
+    stopMediaSessionIndicator();
   }, []);
 
   const toggle = useCallback(() => {

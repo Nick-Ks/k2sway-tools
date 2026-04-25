@@ -6,6 +6,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { PitchDetector } from 'pitchy';
 import { getNoteFromFrequency } from '../lib/pitchUtils.ts';
+import { startMediaSessionIndicator, stopMediaSessionIndicator } from '../lib/mediaSession.ts';
 
 export type InstrumentType = 'chromatic' | 'guitar' | 'bass' | 'ukulele' | 'violin' | 'cello';
 
@@ -94,7 +95,7 @@ export function useTuner(referencePitch: number = 440, profileId: string = 'chro
     octaveJumpCountRef.current = 0;
     lastProcessedAtRef.current = 0;
 
-    if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'paused';
+    stopMediaSessionIndicator();
   }, []);
 
   const start = useCallback(async () => {
@@ -113,7 +114,7 @@ export function useTuner(referencePitch: number = 440, profileId: string = 'chro
       await audioContextRef.current.resume();
 
       analyserRef.current = audioContextRef.current.createAnalyser();
-      analyserRef.current.fftSize = 4096; // Increased FFT size for better resolution at low frequencies
+      analyserRef.current.fftSize = 2048; // Lower latency while keeping enough resolution
 
       sourceRef.current = audioContextRef.current.createMediaStreamSource(stream);
       sourceRef.current.connect(analyserRef.current);
@@ -189,10 +190,12 @@ export function useTuner(referencePitch: number = 440, profileId: string = 'chro
             notePersistenceCountRef.current = 0;
           }
 
-          // Only update UI if note is stable for at least 3 frames
-          if (notePersistenceCountRef.current >= 3) {
+          // Fast first lock, then normal hysteresis
+          const requiredPersistence = hasLockedRef.current ? 2 : 0;
+          if (notePersistenceCountRef.current >= requiredPersistence) {
+            hasLockedRef.current = true;
             centsBufferRef.current.push(note.cents);
-            if (centsBufferRef.current.length > 5) centsBufferRef.current.shift();
+            if (centsBufferRef.current.length > 3) centsBufferRef.current.shift();
             const smoothCents = Math.round(centsBufferRef.current.reduce((a, b) => a + b) / centsBufferRef.current.length);
             
             setPitchData({ ...note, cents: smoothCents, clarity });
@@ -204,6 +207,7 @@ export function useTuner(referencePitch: number = 440, profileId: string = 'chro
             stableFreqRef.current = 0;
             freqBufferRef.current = [];
             notePersistenceCountRef.current = 0;
+            hasLockedRef.current = false;
           }
         }
         

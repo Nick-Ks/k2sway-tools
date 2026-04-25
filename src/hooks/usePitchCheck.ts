@@ -6,6 +6,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { PitchDetector } from 'pitchy';
 import { getNoteFromFrequency } from '../lib/pitchUtils.ts';
+import { startMediaSessionIndicator, stopMediaSessionIndicator } from '../lib/mediaSession.ts';
 
 export function usePitchCheck(referencePitch: number = 440) {
   const [pitchData, setPitchData] = useState<{
@@ -59,7 +60,7 @@ export function usePitchCheck(referencePitch: number = 440) {
     octaveJumpCountRef.current = 0;
     lastProcessedAtRef.current = 0;
 
-    if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'paused';
+    stopMediaSessionIndicator();
   }, []);
 
   const start = useCallback(async () => {
@@ -78,7 +79,7 @@ export function usePitchCheck(referencePitch: number = 440) {
       await audioContextRef.current.resume();
 
       analyserRef.current = audioContextRef.current.createAnalyser();
-      analyserRef.current.fftSize = 4096;
+      analyserRef.current.fftSize = 2048;
 
       const source = audioContextRef.current.createMediaStreamSource(stream);
       source.connect(analyserRef.current);
@@ -157,11 +158,13 @@ export function usePitchCheck(referencePitch: number = 440) {
             lastNoteNameRef.current = note.name;
             notePersistenceCountRef.current = 0;
           }
-
-          if (notePersistenceCountRef.current >= 4) {
+          detectedFramesRef.current++;
+          const requiredPersistence = hasLockedRef.current ? 2 : 0;
+          if (notePersistenceCountRef.current >= requiredPersistence) {
+            hasLockedRef.current = true;
             setPitchData({ ...note, clarity, lvl });
             setHistory(prev => [...prev.slice(-49), smoothPitch]);
-          } else if (pitchData) {
+          } else if (hasLockedRef.current) {
             // Update Volume even if note hasn't switched yet
             setPitchData(p => p ? { ...p, lvl } : null);
           }
@@ -174,6 +177,8 @@ export function usePitchCheck(referencePitch: number = 440) {
             stableFreqRef.current = 0;
             freqBufferRef.current = [];
             notePersistenceCountRef.current = 0;
+            detectedFramesRef.current = 0;
+            hasLockedRef.current = false;
           }
         }
 
@@ -201,7 +206,7 @@ export function usePitchCheck(referencePitch: number = 440) {
       setIsActive(false);
       isActiveRef.current = false;
     }
-  }, [referencePitch, pitchData]);
+  }, [referencePitch, stop]);
 
   // Tone generation for reference notes (Sustain support)
   const oscillatorRef = useRef<OscillatorNode | null>(null);
