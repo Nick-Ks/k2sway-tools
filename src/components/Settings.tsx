@@ -12,8 +12,8 @@ import { motion, AnimatePresence } from 'motion/react';
 
 export default function Settings() {
   const { state: mState, setPresets: setMetronomePresets } = useMetronomeContext();
-  const [tunerSensitivity, setTunerSensitivity] = useState(() => Number(localStorage.getItem('tuner_sensitivity')) || 0.45);
-  const [vocalSensitivity, setVocalSensitivity] = useState(() => Number(localStorage.getItem('vocal_sensitivity')) || 0.40);
+  const [tunerSensitivity, setTunerSensitivity] = useState(() => Number(localStorage.getItem('tuner_sensitivity')) || 0.25);
+  const [vocalSensitivity, setVocalSensitivity] = useState(() => Number(localStorage.getItem('vocal_sensitivity')) || 0.22);
   const [refPresets, setRefPresets] = useState<number[]>(() => {
     const saved = localStorage.getItem('ref_presets');
     return saved ? JSON.parse(saved) : [432, 440, 442, 444];
@@ -308,7 +308,7 @@ export default function Settings() {
                 </div>
                 <div className="flex justify-between text-[9px] font-black text-slate-600 uppercase px-1">
                   <span>10% (고감도)</span>
-                  <span className="text-amber-500/50">45% (기본)</span>
+                  <span className="text-amber-500/50">25% (기본)</span>
                   <span>99% (저감도)</span>
                 </div>
                 <input 
@@ -338,7 +338,7 @@ export default function Settings() {
                 </div>
                 <div className="flex justify-between text-[9px] font-black text-slate-600 uppercase px-1">
                   <span>10% (고감도)</span>
-                  <span className="text-rose-500/50">40% (기본)</span>
+                  <span className="text-rose-500/50">22% (기본)</span>
                   <span>99% (저감도)</span>
                 </div>
                 <input 
