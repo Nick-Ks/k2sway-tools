@@ -23,6 +23,12 @@ export default function Settings() {
     const saved = localStorage.getItem('tuner_profiles');
     return saved ? JSON.parse(saved) : ['chromatic', 'guitar-std', 'bass-4', 'ukulele', 'violin', 'cello'];
   });
+  const [noteNotation, setNoteNotation] = useState<'latin' | 'solfege'>(() => {
+    const saved = localStorage.getItem('note_notation');
+    return saved === 'solfege' ? 'solfege' : 'latin';
+  });
+  const [tunerProcessInterval, setTunerProcessInterval] = useState(() => Number(localStorage.getItem('tuner_process_interval_ms')) || 20);
+  const [vocalProcessInterval, setVocalProcessInterval] = useState(() => Number(localStorage.getItem('vocal_process_interval_ms')) || 22);
 
   const [activeTest, setActiveTest] = useState<'none' | 'metronome' | 'tuner' | 'vocal'>('none');
   const activeTestRef = useRef(activeTest);
@@ -58,6 +64,18 @@ export default function Settings() {
   useEffect(() => {
     localStorage.setItem('tuner_profiles', JSON.stringify(enabledProfiles));
   }, [enabledProfiles]);
+
+  useEffect(() => {
+    localStorage.setItem('note_notation', noteNotation);
+  }, [noteNotation]);
+
+  useEffect(() => {
+    localStorage.setItem('tuner_process_interval_ms', tunerProcessInterval.toString());
+  }, [tunerProcessInterval]);
+
+  useEffect(() => {
+    localStorage.setItem('vocal_process_interval_ms', vocalProcessInterval.toString());
+  }, [vocalProcessInterval]);
 
   const updateMetronomePreset = (idx: number, val: string) => {
     const newPresets = [...mState.presets];
@@ -376,6 +394,73 @@ export default function Settings() {
                   )}
                 </AnimatePresence>
               </div>
+            </div>
+
+            <div className="bg-slate-900/50 border border-slate-800 rounded-[2.5rem] p-8 space-y-8">
+              <div className="flex items-center gap-3">
+                <Keyboard size={18} className="text-violet-400" />
+                <span className="text-label">음표 표기 방식</span>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  onClick={() => setNoteNotation('latin')}
+                  className={cn(
+                    "h-14 rounded-2xl border font-black text-sm transition-all",
+                    noteNotation === 'latin'
+                      ? "bg-violet-500 text-white border-violet-400"
+                      : "bg-slate-950 border-slate-800 text-slate-300"
+                  )}
+                >
+                  C D E F G A B
+                </button>
+                <button
+                  onClick={() => setNoteNotation('solfege')}
+                  className={cn(
+                    "h-14 rounded-2xl border font-black text-sm transition-all",
+                    noteNotation === 'solfege'
+                      ? "bg-violet-500 text-white border-violet-400"
+                      : "bg-slate-950 border-slate-800 text-slate-300"
+                  )}
+                >
+                  도 레 미 파 솔 라 시
+                </button>
+              </div>
+              <p className="text-desc">튜너와 보컬 피치 화면의 음표 표기에 즉시 반영됩니다.</p>
+            </div>
+
+            <div className="bg-slate-900/50 border border-slate-800 rounded-[2.5rem] p-8 space-y-8">
+              <span className="text-label block">소리 분석 처리 간격 (튀는 현상 완화)</span>
+              <div className="space-y-4">
+                <div className="flex items-center justify-between text-[12px] font-bold text-slate-300">
+                  <span>악기 튜너</span>
+                  <span>{tunerProcessInterval}ms</span>
+                </div>
+                <input
+                  type="range"
+                  min="10"
+                  max="36"
+                  step="1"
+                  value={tunerProcessInterval}
+                  onChange={(e) => setTunerProcessInterval(Number(e.target.value))}
+                  className="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-amber-500"
+                />
+              </div>
+              <div className="space-y-4">
+                <div className="flex items-center justify-between text-[12px] font-bold text-slate-300">
+                  <span>보컬 피치</span>
+                  <span>{vocalProcessInterval}ms</span>
+                </div>
+                <input
+                  type="range"
+                  min="12"
+                  max="36"
+                  step="1"
+                  value={vocalProcessInterval}
+                  onChange={(e) => setVocalProcessInterval(Number(e.target.value))}
+                  className="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-rose-500"
+                />
+              </div>
+              <p className="text-desc">값을 높일수록 반응은 느려지지만 음정 표시가 더 안정적으로 유지됩니다.</p>
             </div>
 
             {/* Reference Presets */}
