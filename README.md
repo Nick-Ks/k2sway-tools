@@ -28,9 +28,8 @@ View your app in AI Studio: https://ai.studio/apps/b0b04504-1b0f-4f7d-820c-7228e
 
 설정 순서:
 1. GitHub 저장소 → **Settings** → **Pages**
-2. **Build and deployment**에서 **Source = Deploy from a branch** 선택
-3. **Branch = `gh-pages` / `/ (root)`** 선택
-4. `main` 또는 `master`로 push
-5. Actions 탭의 `Deploy Web to GitHub Pages` 완료 후 URL 접속
+2. **Build and deployment**에서 **Source = GitHub Actions** 선택
+3. `main` 또는 `master`로 push
+4. Actions 탭의 `Deploy Web to GitHub Pages` 완료 후 URL 접속
 
 참고: Vite base 경로는 워크플로우에서 자동으로 `/${{ github.event.repository.name }}/`로 설정됩니다.

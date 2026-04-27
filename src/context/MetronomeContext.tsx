@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useRef, useCallback, useEffect } from 'react';
+import { startMediaSessionIndicator, stopMediaSessionIndicator } from '../lib/mediaSession.ts';
 
 interface MetronomeState {
   bpm: number;
@@ -141,33 +142,23 @@ export function MetronomeProvider({ children }: { children: React.ReactNode }) {
     scheduler();
 
     if ('mediaSession' in navigator) {
-      try {
-        navigator.mediaSession.playbackState = 'playing';
-        if ('MediaMetadata' in window) {
-          navigator.mediaSession.metadata = new MediaMetadata({
-            title: `Metronome - ${bpmRef.current} BPM`,
-            artist: 'K2Sway Practice',
-            album: 'Rehearsal Tools'
-          });
-        }
-        navigator.mediaSession.setActionHandler('pause', stop);
-      } catch {
-        // Ignore partial MediaSession support cases.
-      }
+      navigator.mediaSession.playbackState = 'playing';
+      navigator.mediaSession.metadata = new MediaMetadata({
+        title: `Metronome - ${bpmRef.current} BPM`,
+        artist: 'K2Sway Practice',
+        album: 'Rehearsal Tools'
+      });
+      navigator.mediaSession.setActionHandler('pause', stop);
     }
 
     if ('Notification' in window) {
       const showNotice = () => {
-        try {
-          notificationRef.current?.close();
-          notificationRef.current = new Notification('메트로놈 동작중', {
-            body: `${bpmRef.current} BPM`,
-            tag: 'k2sway-metronome-active',
-            requireInteraction: true
-          });
-        } catch {
-          // Notification unsupported in some mobile WebViews.
-        }
+        notificationRef.current?.close();
+        notificationRef.current = new Notification('메트로놈 동작중', {
+          body: `${bpmRef.current} BPM`,
+          tag: 'k2sway-metronome-active',
+          requireInteraction: true
+        });
       };
 
       if (Notification.permission === 'granted') {
@@ -184,11 +175,7 @@ export function MetronomeProvider({ children }: { children: React.ReactNode }) {
     setIsPlaying(false);
     isPlayingRef.current = false;
     if (timerIDRef.current) clearTimeout(timerIDRef.current);
-    if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'paused';
-    if (notificationRef.current) {
-      notificationRef.current.close();
-      notificationRef.current = null;
-    }
+    stopMediaSessionIndicator();
   }, []);
 
   const toggle = useCallback(() => {
