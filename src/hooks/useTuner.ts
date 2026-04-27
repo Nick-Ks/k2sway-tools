@@ -80,11 +80,18 @@ export function useTuner(referencePitch: number = 440, profileId: string = 'chro
         analyserRef.current.disconnect();
         analyserRef.current = null;
     }
+    if (oscillatorRef.current && gainRef.current && audioContextRef.current) {
+        const g = gainRef.current;
+        g.gain.cancelScheduledValues(audioContextRef.current.currentTime);
+        g.gain.setValueAtTime(g.gain.value, audioContextRef.current.currentTime);
+        g.gain.exponentialRampToValueAtTime(0.001, audioContextRef.current.currentTime + 0.05);
+        oscillatorRef.current.stop(audioContextRef.current.currentTime + 0.05);
+        oscillatorRef.current = null;
+        gainRef.current = null;
+    }
     if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
-        if (!oscillatorRef.current) {
-            audioContextRef.current.close().catch(() => {});
-            audioContextRef.current = null;
-        }
+        audioContextRef.current.close().catch(() => {});
+        audioContextRef.current = null;
     }
     setIsActive(false);
     setPitchData(null);
@@ -219,7 +226,6 @@ export function useTuner(referencePitch: number = 440, profileId: string = 'chro
       setIsActive(true);
       setError(null);
 
-      // Use Media Session API for status bar control
       if ('mediaSession' in navigator) {
         navigator.mediaSession.playbackState = 'playing';
         navigator.mediaSession.metadata = new MediaMetadata({
@@ -227,9 +233,7 @@ export function useTuner(referencePitch: number = 440, profileId: string = 'chro
           artist: 'K2Sway Music Tools',
           album: '마이크 활성화됨'
         });
-        navigator.mediaSession.setActionHandler('pause', () => {
-          stop();
-        });
+        navigator.mediaSession.setActionHandler('pause', stop);
       }
     } catch (err) {
       setError('마이크 권한이 필요합니다.');

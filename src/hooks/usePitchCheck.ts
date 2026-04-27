@@ -36,6 +36,8 @@ export function usePitchCheck(referencePitch: number = 440) {
   const lastProcessedAtRef = useRef(0);
 
   const isActiveRef = useRef(false);
+  const oscillatorRef = useRef<OscillatorNode | null>(null);
+  const gainRef = useRef<GainNode | null>(null);
 
   const stop = useCallback(() => {
     isActiveRef.current = false;
@@ -49,6 +51,15 @@ export function usePitchCheck(referencePitch: number = 440) {
         analyserRef.current = null;
     }
     if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
+      if (oscillatorRef.current) {
+        oscillatorRef.current.stop();
+        oscillatorRef.current.disconnect();
+        oscillatorRef.current = null;
+      }
+      if (gainRef.current) {
+        gainRef.current.disconnect();
+        gainRef.current = null;
+      }
       audioContextRef.current.close().catch(() => {});
       audioContextRef.current = null;
     }
@@ -189,7 +200,6 @@ export function usePitchCheck(referencePitch: number = 440) {
       setIsActive(true);
       setError(null);
 
-      // Use Media Session API for status bar control
       if ('mediaSession' in navigator) {
         navigator.mediaSession.playbackState = 'playing';
         navigator.mediaSession.metadata = new MediaMetadata({
@@ -197,9 +207,7 @@ export function usePitchCheck(referencePitch: number = 440) {
           artist: 'K2Sway Music Tools',
           album: '마이크 활성화됨'
         });
-        navigator.mediaSession.setActionHandler('pause', () => {
-          stop();
-        });
+        navigator.mediaSession.setActionHandler('pause', stop);
       }
     } catch (err) {
       setError('마이크 권한이 필요합니다.');
@@ -209,8 +217,6 @@ export function usePitchCheck(referencePitch: number = 440) {
   }, [referencePitch, stop]);
 
   // Tone generation for reference notes (Sustain support)
-  const oscillatorRef = useRef<OscillatorNode | null>(null);
-  const gainRef = useRef<GainNode | null>(null);
 
   const startReferenceNote = useCallback((frequency: number) => {
     if (!audioContextRef.current) {

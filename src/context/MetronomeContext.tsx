@@ -37,6 +37,7 @@ export function MetronomeProvider({ children }: { children: React.ReactNode }) {
   const nextNoteTimeRef = useRef(0);
   const timerIDRef = useRef<number | null>(null);
   const beatRef = useRef(0);
+  const notificationRef = useRef<Notification | null>(null);
   
   // Refs for scheduler to avoid stale closures
   const bpmRef = useRef(bpm);
@@ -140,7 +141,6 @@ export function MetronomeProvider({ children }: { children: React.ReactNode }) {
     beatRef.current = 0;
     scheduler();
 
-    // Use Media Session API for status bar control
     if ('mediaSession' in navigator) {
       navigator.mediaSession.playbackState = 'playing';
       navigator.mediaSession.metadata = new MediaMetadata({
@@ -149,6 +149,25 @@ export function MetronomeProvider({ children }: { children: React.ReactNode }) {
         album: 'Rehearsal Tools'
       });
       navigator.mediaSession.setActionHandler('pause', stop);
+    }
+
+    if ('Notification' in window) {
+      const showNotice = () => {
+        notificationRef.current?.close();
+        notificationRef.current = new Notification('메트로놈 동작중', {
+          body: `${bpmRef.current} BPM`,
+          tag: 'k2sway-metronome-active',
+          requireInteraction: true
+        });
+      };
+
+      if (Notification.permission === 'granted') {
+        showNotice();
+      } else if (Notification.permission === 'default') {
+        Notification.requestPermission().then(permission => {
+          if (permission === 'granted' && isPlayingRef.current) showNotice();
+        });
+      }
     }
   }, [scheduler]);
 
