@@ -6,6 +6,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { PitchDetector } from 'pitchy';
 import { getNoteFromFrequency } from '../lib/pitchUtils.ts';
+import { startMediaSessionIndicator, stopMediaSessionIndicator } from '../lib/mediaSession.ts';
 
 export function usePitchCheck(referencePitch: number = 440) {
   const [pitchData, setPitchData] = useState<{
@@ -33,8 +34,6 @@ export function usePitchCheck(referencePitch: number = 440) {
   const notePersistenceCountRef = useRef(0);
   const silenceCountRef = useRef(0);
   const lastProcessedAtRef = useRef(0);
-  const detectedFramesRef = useRef(0);
-  const hasLockedRef = useRef(false);
 
   const isActiveRef = useRef(false);
   const oscillatorRef = useRef<OscillatorNode | null>(null);
@@ -71,10 +70,8 @@ export function usePitchCheck(referencePitch: number = 440) {
     stableFreqRef.current = 0;
     octaveJumpCountRef.current = 0;
     lastProcessedAtRef.current = 0;
-    detectedFramesRef.current = 0;
-    hasLockedRef.current = false;
 
-    if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'paused';
+    stopMediaSessionIndicator();
   }, []);
 
   const start = useCallback(async () => {
@@ -102,7 +99,7 @@ export function usePitchCheck(referencePitch: number = 440) {
       const input = new Float32Array(analyserRef.current.fftSize);
 
       const sensitivity = Number(localStorage.getItem('vocal_sensitivity')) || 0.40;
-      const processIntervalMs = Math.min(36, Math.max(12, Number(localStorage.getItem('vocal_process_interval_ms')) || 22));
+      const processIntervalMs = Math.min(120, Math.max(16, Number(localStorage.getItem('vocal_process_interval_ms')) || 45));
 
       const updatePitch = () => {
         if (!isActiveRef.current || !analyserRef.current || !audioContextRef.current) return;
@@ -146,7 +143,7 @@ export function usePitchCheck(referencePitch: number = 440) {
 
           // 2. Median Filter
           freqBufferRef.current.push(pitch);
-          if (freqBufferRef.current.length > 5) freqBufferRef.current.shift();
+          if (freqBufferRef.current.length > 7) freqBufferRef.current.shift();
           
           let medianPitch = pitch;
           if (freqBufferRef.current.length >= 3) {
