@@ -167,7 +167,7 @@ export default function PitchCheck() {
                {vocalRange ? (
                  <div className="flex items-center">
                     <span className="text-2xl font-black text-rose-400">
-                      {getNoteLabel(vocalRange.low.name, notation)}<span className="text-sm opacity-70 ml-1">옥타브 {vocalRange.low.octave}</span>
+                      {getNoteLabel(vocalRange.low.name, notation)}<span className="text-sm opacity-70 ml-1">옥타브 {vocalRange.low.oct}</span>
                     </span>
                  </div>
                ) : (
@@ -179,7 +179,7 @@ export default function PitchCheck() {
                {vocalRange ? (
                  <div className="flex items-center">
                     <span className="text-2xl font-black text-sky-400">
-                      {getNoteLabel(vocalRange.high.name, notation)}<span className="text-sm opacity-70 ml-1">옥타브 {vocalRange.high.octave}</span>
+                      {getNoteLabel(vocalRange.high.name, notation)}<span className="text-sm opacity-70 ml-1">옥타브 {vocalRange.high.oct}</span>
                     </span>
                  </div>
                ) : (

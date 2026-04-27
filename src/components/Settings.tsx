@@ -27,8 +27,8 @@ export default function Settings() {
     const saved = localStorage.getItem('note_notation');
     return saved === 'solfege' ? 'solfege' : 'latin';
   });
-  const [tunerProcessInterval, setTunerProcessInterval] = useState(() => Number(localStorage.getItem('tuner_process_interval_ms')) || 20);
-  const [vocalProcessInterval, setVocalProcessInterval] = useState(() => Number(localStorage.getItem('vocal_process_interval_ms')) || 22);
+  const [tunerProcessInterval, setTunerProcessInterval] = useState(() => Number(localStorage.getItem('tuner_process_interval_ms')) || 40);
+  const [vocalProcessInterval, setVocalProcessInterval] = useState(() => Number(localStorage.getItem('vocal_process_interval_ms')) || 45);
 
   const [activeTest, setActiveTest] = useState<'none' | 'metronome' | 'tuner' | 'vocal'>('none');
   const activeTestRef = useRef(activeTest);
@@ -437,8 +437,8 @@ export default function Settings() {
                 </div>
                 <input
                   type="range"
-                  min="10"
-                  max="36"
+                  min="16"
+                  max="120"
                   step="1"
                   value={tunerProcessInterval}
                   onChange={(e) => setTunerProcessInterval(Number(e.target.value))}
@@ -452,8 +452,8 @@ export default function Settings() {
                 </div>
                 <input
                   type="range"
-                  min="12"
-                  max="36"
+                  min="16"
+                  max="120"
                   step="1"
                   value={vocalProcessInterval}
                   onChange={(e) => setVocalProcessInterval(Number(e.target.value))}
