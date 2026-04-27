@@ -9,7 +9,7 @@ import { Mic, MicOff, AlertCircle, ChevronDown, CheckCircle2, Volume2 } from 'lu
 import { TuningFork } from './icons/TuningFork.tsx';
 import { useTuner, INSTRUMENT_PROFILES, TuningProfile } from '../hooks/useTuner.ts';
 import { cn } from '../lib/utils.ts';
-import { CHROMATIC_FREQUENCIES, getNoteFromFrequency, NOTE_NAMES } from '../lib/pitchUtils.ts';
+import { CHROMATIC_FREQUENCIES, getNoteFromFrequency, getNotationPreference, getNoteLabel, NOTE_NAMES } from '../lib/pitchUtils.ts';
 
 export default function Tuner() {
   const [refPresets] = useState<number[]>(() => {
@@ -44,15 +44,10 @@ export default function Tuner() {
     };
   }, [stop]);
 
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      stop();
-    };
-  }, [stop]);
-
   const cents = pitchData?.cents || 0;
   const noteName = pitchData?.name || '-';
+  const notation = getNotationPreference();
+  const displayNoteName = pitchData ? getNoteLabel(noteName, notation) : noteName;
   const octave = pitchData?.octave !== undefined ? pitchData.octave : '';
   const inTune = Math.abs(cents) <= 3; 
 
@@ -67,7 +62,6 @@ export default function Tuner() {
     const freq = refPitch * Math.pow(2, (semitones - 69) / 12);
     
     startTone(freq);
-    setTimeout(stopTone, 1500);
   };
 
   const handleRefSelect = (hz: number) => {
@@ -142,6 +136,8 @@ export default function Tuner() {
             <div className="flex flex-wrap justify-center gap-2">
               {selectedProfile.notes.map((n) => {
                 const isActive = noteName + octave === n;
+                const refNoteName = n.replace(/[0-9]/g, '');
+                const refOctave = n.replace(/[^0-9]/g, '');
                 return (
                   <button 
                     key={n} 
@@ -155,8 +151,8 @@ export default function Tuner() {
                         : "bg-slate-950 border-slate-800 text-slate-400 hover:bg-slate-800 hover:text-slate-200"
                     )}
                   >
-                    <span className="text-[11px] font-black leading-none uppercase">{n.replace(/[0-9]/g, '')}</span>
-                    <span className="text-[9px] font-black opacity-40 leading-none mt-1">{n.replace(/[^0-9]/g, '')}</span>
+                    <span className="text-[11px] font-black leading-none">{getNoteLabel(refNoteName, notation)}</span>
+                    <span className="text-[9px] font-black opacity-60 leading-none mt-1">옥타브 {refOctave}</span>
                     <div className="absolute top-1 right-1">
                       <Volume2 size={7} className="opacity-30" />
                     </div>
@@ -219,7 +215,7 @@ export default function Tuner() {
                     return notesToShow.map((midi) => {
                       const noteIdx = midi % 12;
                       const oct = Math.floor(midi / 12) - 1;
-                      const name = NOTE_NAMES[noteIdx];
+                      const name = getNoteLabel(NOTE_NAMES[noteIdx], notation);
                       
                       const diffInCents = (midi - currentMidi) * 100 - cents;
                       const x = mapCentsToX(diffInCents);
@@ -293,7 +289,7 @@ export default function Tuner() {
           <div className="flex flex-col items-center gap-2">
             <div className="flex items-baseline gap-2">
               <motion.span
-                key={noteName}
+                key={displayNoteName}
                 initial={{ scale: 0.9, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
                 className={cn(
@@ -301,9 +297,9 @@ export default function Tuner() {
                   isActive && pitchData ? (inTune ? "text-emerald-400" : "text-white") : "text-slate-900"
                 )}
               >
-                {noteName}
+                {displayNoteName}
               </motion.span>
-              <span className="text-3xl font-bold text-amber-500/80">{octave}</span>
+              <span className="text-3xl font-bold text-amber-500/80">옥타브 {octave}</span>
             </div>
             
             <div className="flex flex-col items-center h-12">

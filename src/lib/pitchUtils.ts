@@ -8,6 +8,8 @@ export const CHROMATIC_FREQUENCIES: Record<string, number> = {
 };
 
 export const NOTE_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+const SOLFEGE_NOTE_NAMES = ['도', '도#', '레', '레#', '미', '파', '파#', '솔', '솔#', '라', '라#', '시'];
+export type NoteNotation = 'latin' | 'solfege';
 
 export function getNoteFromFrequency(frequency: number, referenceA4: number = 440) {
   // Formula: n = 12 * log2(f / f0)
@@ -29,4 +31,19 @@ export function getNoteFromFrequency(frequency: number, referenceA4: number = 44
     cents,
     frequency
   };
+}
+
+export function getNoteLabel(note: string, notation: NoteNotation = 'latin') {
+  const noteIndex = NOTE_NAMES.indexOf(note);
+  if (noteIndex === -1) return note;
+  return notation === 'solfege' ? SOLFEGE_NOTE_NAMES[noteIndex] : NOTE_NAMES[noteIndex];
+}
+
+export function getNoteWithOctaveLabel(note: string, octave: number | string, notation: NoteNotation = 'latin') {
+  return `${getNoteLabel(note, notation)}${octave}`;
+}
+
+export function getNotationPreference(): NoteNotation {
+  const raw = localStorage.getItem('note_notation');
+  return raw === 'solfege' ? 'solfege' : 'latin';
 }
