@@ -80,7 +80,14 @@ export function usePitchCheck(referencePitch: number = 440) {
     isActiveRef.current = true;
 
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          echoCancellation: false,
+          noiseSuppression: false,
+          autoGainControl: false,
+          channelCount: 1
+        }
+      });
       streamRef.current = stream;
 
       if (!audioContextRef.current || audioContextRef.current.state === 'closed') {
@@ -123,8 +130,21 @@ export function usePitchCheck(referencePitch: number = 440) {
         const rms = Math.sqrt(sum / input.length);
         const lvl = Math.min(1, rms * 15); // Boost volume visual response
 
-        if (clarity > sensitivity && pitch > 50 && pitch < 1200) {
+        const clarityGate = rms > 0.015 ? Math.max(0.08, sensitivity * 0.6) : sensitivity;
+        const isLowEnergy = rms < 0.01;
+
+        if (clarity > clarityGate && pitch > 50 && pitch < 1200) {
           silenceCountRef.current = 0;
+          if (isLowEnergy && hasLockedRef.current) {
+            lowEnergyHoldFramesRef.current++;
+            if (lowEnergyHoldFramesRef.current <= 8) {
+              setPitchData(p => p ? { ...p, lvl } : null);
+              animationFrameRef.current = requestAnimationFrame(updatePitch);
+              return;
+            }
+          } else {
+            lowEnergyHoldFramesRef.current = 0;
+          }
 
           // 1. Harmonic Rejection
           if (stableFreqRef.current > 0) {
@@ -138,6 +158,13 @@ export function usePitchCheck(referencePitch: number = 440) {
               }
             } else {
               octaveJumpCountRef.current = 0;
+            }
+
+            const largeJump = ratio > 1.35 || ratio < 0.74;
+            if (largeJump && clarity < sensitivity + 0.08 && !isLowEnergy) {
+              setPitchData(p => p ? { ...p, lvl } : null);
+              animationFrameRef.current = requestAnimationFrame(updatePitch);
+              return;
             }
           }
 

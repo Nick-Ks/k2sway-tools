@@ -111,7 +111,14 @@ export function useTuner(referencePitch: number = 440, profileId: string = 'chro
     isActiveRef.current = true;
     
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          echoCancellation: false,
+          noiseSuppression: false,
+          autoGainControl: false,
+          channelCount: 1
+        }
+      });
       streamRef.current = stream;
 
       if (!audioContextRef.current || audioContextRef.current.state === 'closed') {
@@ -147,9 +154,23 @@ export function useTuner(referencePitch: number = 440, profileId: string = 'chro
 
         analyserRef.current.getFloatTimeDomainData(input);
         const [pitch, clarity] = detector.findPitch(input, audioContextRef.current.sampleRate);
+        let sum = 0;
+        for (let i = 0; i < input.length; i++) sum += input[i] * input[i];
+        const rms = Math.sqrt(sum / input.length);
+        const clarityGate = rms > 0.015 ? Math.max(0.08, currentSensitivity * 0.6) : currentSensitivity;
+        const isLowEnergy = rms < 0.01;
 
-        if (clarity > currentSensitivity && pitch > 20 && pitch < 2500) {
+        if (clarity > clarityGate && pitch > 20 && pitch < 2500) {
           silenceCountRef.current = 0;
+          if (isLowEnergy && hasLockedRef.current) {
+            lowEnergyHoldFramesRef.current++;
+            if (lowEnergyHoldFramesRef.current <= 8) {
+              animationFrameRef.current = requestAnimationFrame(updatePitch);
+              return;
+            }
+          } else {
+            lowEnergyHoldFramesRef.current = 0;
+          }
 
           // 1. Harmonic Rejection (Octave Error Correction)
           if (stableFreqRef.current > 0) {
@@ -164,6 +185,14 @@ export function useTuner(referencePitch: number = 440, profileId: string = 'chro
               }
             } else {
               octaveJumpCountRef.current = 0;
+            }
+
+            // Additional jump rejection when clarity drops:
+            // prefer previous strong fundamental over sudden candidate flips.
+            const largeJump = ratio > 1.35 || ratio < 0.74;
+            if (largeJump && clarity < currentSensitivity + 0.08 && !isLowEnergy) {
+              animationFrameRef.current = requestAnimationFrame(updatePitch);
+              return;
             }
           }
 
