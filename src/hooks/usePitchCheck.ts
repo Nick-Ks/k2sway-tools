@@ -32,8 +32,14 @@ export function usePitchCheck(referencePitch: number = 440) {
   const lastNoteNameRef = useRef<string>('');
   const notePersistenceCountRef = useRef(0);
   const silenceCountRef = useRef(0);
+  const lastProcessedAtRef = useRef(0);
+  const detectedFramesRef = useRef(0);
+  const hasLockedRef = useRef(false);
+  const lowEnergyHoldFramesRef = useRef(0);
 
   const isActiveRef = useRef(false);
+  const oscillatorRef = useRef<OscillatorNode | null>(null);
+  const gainRef = useRef<GainNode | null>(null);
 
   const stop = useCallback(() => {
     isActiveRef.current = false;
@@ -47,6 +53,15 @@ export function usePitchCheck(referencePitch: number = 440) {
         analyserRef.current = null;
     }
     if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
+      if (oscillatorRef.current) {
+        oscillatorRef.current.stop();
+        oscillatorRef.current.disconnect();
+        oscillatorRef.current = null;
+      }
+      if (gainRef.current) {
+        gainRef.current.disconnect();
+        gainRef.current = null;
+      }
       audioContextRef.current.close().catch(() => {});
       audioContextRef.current = null;
     }
@@ -56,6 +71,10 @@ export function usePitchCheck(referencePitch: number = 440) {
     freqBufferRef.current = [];
     stableFreqRef.current = 0;
     octaveJumpCountRef.current = 0;
+    lastProcessedAtRef.current = 0;
+    detectedFramesRef.current = 0;
+    hasLockedRef.current = false;
+    lowEnergyHoldFramesRef.current = 0;
 
     if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'paused';
   }, []);
@@ -66,7 +85,14 @@ export function usePitchCheck(referencePitch: number = 440) {
     isActiveRef.current = true;
 
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          echoCancellation: false,
+          noiseSuppression: false,
+          autoGainControl: false,
+          channelCount: 1
+        }
+      });
       streamRef.current = stream;
 
       if (!audioContextRef.current || audioContextRef.current.state === 'closed') {
@@ -76,7 +102,7 @@ export function usePitchCheck(referencePitch: number = 440) {
       await audioContextRef.current.resume();
 
       analyserRef.current = audioContextRef.current.createAnalyser();
-      analyserRef.current.fftSize = 4096;
+      analyserRef.current.fftSize = 2048;
 
       const source = audioContextRef.current.createMediaStreamSource(stream);
       source.connect(analyserRef.current);
@@ -84,7 +110,11 @@ export function usePitchCheck(referencePitch: number = 440) {
       const detector = PitchDetector.forFloat32Array(analyserRef.current.fftSize);
       const input = new Float32Array(analyserRef.current.fftSize);
 
-      const sensitivity = Number(localStorage.getItem('vocal_sensitivity')) || 0.40;
+      const savedSensitivity = Number(localStorage.getItem('vocal_sensitivity'));
+      const sensitivity = Number.isFinite(savedSensitivity)
+        ? Math.min(0.95, Math.max(0.05, savedSensitivity))
+        : 0.1;
+      const processIntervalMs = Math.min(36, Math.max(12, Number(localStorage.getItem('vocal_process_interval_ms')) || 22));
 
       const updatePitch = () => {
         if (!isActiveRef.current || !analyserRef.current || !audioContextRef.current) return;
@@ -92,6 +122,12 @@ export function usePitchCheck(referencePitch: number = 440) {
         if (audioContextRef.current.state === 'suspended') {
           audioContextRef.current.resume();
         }
+        const now = performance.now();
+        if (now - lastProcessedAtRef.current < processIntervalMs) {
+          animationFrameRef.current = requestAnimationFrame(updatePitch);
+          return;
+        }
+        lastProcessedAtRef.current = now;
 
         analyserRef.current.getFloatTimeDomainData(input);
         const [pitch, clarity] = detector.findPitch(input, audioContextRef.current.sampleRate);
@@ -102,8 +138,21 @@ export function usePitchCheck(referencePitch: number = 440) {
         const rms = Math.sqrt(sum / input.length);
         const lvl = Math.min(1, rms * 15); // Boost volume visual response
 
-        if (clarity > sensitivity && pitch > 50 && pitch < 1200) {
+        const clarityGate = rms > 0.012 ? Math.max(0.03, sensitivity * 0.45) : sensitivity;
+        const isLowEnergy = rms < 0.01;
+
+        if (clarity > clarityGate && pitch > 40 && pitch < 1200) {
           silenceCountRef.current = 0;
+          if (isLowEnergy && hasLockedRef.current) {
+            lowEnergyHoldFramesRef.current++;
+            if (lowEnergyHoldFramesRef.current <= 8) {
+              setPitchData(p => p ? { ...p, lvl } : null);
+              animationFrameRef.current = requestAnimationFrame(updatePitch);
+              return;
+            }
+          } else {
+            lowEnergyHoldFramesRef.current = 0;
+          }
 
           // 1. Harmonic Rejection
           if (stableFreqRef.current > 0) {
@@ -117,6 +166,13 @@ export function usePitchCheck(referencePitch: number = 440) {
               }
             } else {
               octaveJumpCountRef.current = 0;
+            }
+
+            const largeJump = ratio > 1.35 || ratio < 0.74;
+            if (largeJump && clarity < sensitivity + 0.08 && !isLowEnergy) {
+              setPitchData(p => p ? { ...p, lvl } : null);
+              animationFrameRef.current = requestAnimationFrame(updatePitch);
+              return;
             }
           }
 
@@ -148,11 +204,13 @@ export function usePitchCheck(referencePitch: number = 440) {
             lastNoteNameRef.current = note.name;
             notePersistenceCountRef.current = 0;
           }
-
-          if (notePersistenceCountRef.current >= 4) {
+          detectedFramesRef.current++;
+          const requiredPersistence = hasLockedRef.current ? 1 : 0;
+          if (notePersistenceCountRef.current >= requiredPersistence) {
+            hasLockedRef.current = true;
             setPitchData({ ...note, clarity, lvl });
             setHistory(prev => [...prev.slice(-49), smoothPitch]);
-          } else if (pitchData) {
+          } else if (hasLockedRef.current) {
             // Update Volume even if note hasn't switched yet
             setPitchData(p => p ? { ...p, lvl } : null);
           }
@@ -165,6 +223,9 @@ export function usePitchCheck(referencePitch: number = 440) {
             stableFreqRef.current = 0;
             freqBufferRef.current = [];
             notePersistenceCountRef.current = 0;
+            detectedFramesRef.current = 0;
+            hasLockedRef.current = false;
+            lowEnergyHoldFramesRef.current = 0;
           }
         }
 
@@ -175,27 +236,29 @@ export function usePitchCheck(referencePitch: number = 440) {
       setIsActive(true);
       setError(null);
 
-      // Use Media Session API for status bar control
       if ('mediaSession' in navigator) {
-        navigator.mediaSession.metadata = new MediaMetadata({
-          title: '보컬 피치 분석 중',
-          artist: 'K2Sway Music Tools',
-          album: '마이크 활성화됨'
-        });
-        navigator.mediaSession.setActionHandler('pause', () => {
-          stop();
-        });
+        try {
+          navigator.mediaSession.playbackState = 'playing';
+          if ('MediaMetadata' in window) {
+            navigator.mediaSession.metadata = new MediaMetadata({
+              title: '보컬 피치 분석 중',
+              artist: 'K2Sway Music Tools',
+              album: '마이크 활성화됨'
+            });
+          }
+          navigator.mediaSession.setActionHandler('pause', stop);
+        } catch {
+          // Some mobile WebViews partially implement MediaSession.
+        }
       }
     } catch (err) {
       setError('마이크 권한이 필요합니다.');
       setIsActive(false);
       isActiveRef.current = false;
     }
-  }, [referencePitch, pitchData]);
+  }, [referencePitch, stop]);
 
   // Tone generation for reference notes (Sustain support)
-  const oscillatorRef = useRef<OscillatorNode | null>(null);
-  const gainRef = useRef<GainNode | null>(null);
 
   const startReferenceNote = useCallback((frequency: number) => {
     if (!audioContextRef.current) {
