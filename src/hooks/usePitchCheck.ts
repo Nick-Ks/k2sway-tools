@@ -6,6 +6,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { PitchDetector } from 'pitchy';
 import { getNoteFromFrequency } from '../lib/pitchUtils.ts';
+import { startMediaSessionIndicator, stopMediaSessionIndicator } from '../lib/mediaSession.ts';
 
 export function usePitchCheck(referencePitch: number = 440) {
   const [pitchData, setPitchData] = useState<{
@@ -33,9 +34,6 @@ export function usePitchCheck(referencePitch: number = 440) {
   const notePersistenceCountRef = useRef(0);
   const silenceCountRef = useRef(0);
   const lastProcessedAtRef = useRef(0);
-  const detectedFramesRef = useRef(0);
-  const hasLockedRef = useRef(false);
-  const lowEnergyHoldFramesRef = useRef(0);
 
   const isActiveRef = useRef(false);
   const oscillatorRef = useRef<OscillatorNode | null>(null);
@@ -72,11 +70,8 @@ export function usePitchCheck(referencePitch: number = 440) {
     stableFreqRef.current = 0;
     octaveJumpCountRef.current = 0;
     lastProcessedAtRef.current = 0;
-    detectedFramesRef.current = 0;
-    hasLockedRef.current = false;
-    lowEnergyHoldFramesRef.current = 0;
 
-    if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'paused';
+    stopMediaSessionIndicator();
   }, []);
 
   const start = useCallback(async () => {
@@ -110,11 +105,8 @@ export function usePitchCheck(referencePitch: number = 440) {
       const detector = PitchDetector.forFloat32Array(analyserRef.current.fftSize);
       const input = new Float32Array(analyserRef.current.fftSize);
 
-      const savedSensitivity = Number(localStorage.getItem('vocal_sensitivity'));
-      const sensitivity = Number.isFinite(savedSensitivity)
-        ? Math.min(0.95, Math.max(0.1, savedSensitivity))
-        : 0.22;
-      const processIntervalMs = Math.min(36, Math.max(12, Number(localStorage.getItem('vocal_process_interval_ms')) || 22));
+      const sensitivity = Number(localStorage.getItem('vocal_sensitivity')) || 0.40;
+      const processIntervalMs = Math.min(120, Math.max(16, Number(localStorage.getItem('vocal_process_interval_ms')) || 45));
 
       const updatePitch = () => {
         if (!isActiveRef.current || !analyserRef.current || !audioContextRef.current) return;
@@ -178,7 +170,7 @@ export function usePitchCheck(referencePitch: number = 440) {
 
           // 2. Median Filter
           freqBufferRef.current.push(pitch);
-          if (freqBufferRef.current.length > 5) freqBufferRef.current.shift();
+          if (freqBufferRef.current.length > 7) freqBufferRef.current.shift();
           
           let medianPitch = pitch;
           if (freqBufferRef.current.length >= 3) {
@@ -205,7 +197,7 @@ export function usePitchCheck(referencePitch: number = 440) {
             notePersistenceCountRef.current = 0;
           }
           detectedFramesRef.current++;
-          const requiredPersistence = hasLockedRef.current ? 1 : 0;
+          const requiredPersistence = hasLockedRef.current ? 2 : 0;
           if (notePersistenceCountRef.current >= requiredPersistence) {
             hasLockedRef.current = true;
             setPitchData({ ...note, clarity, lvl });
@@ -225,7 +217,6 @@ export function usePitchCheck(referencePitch: number = 440) {
             notePersistenceCountRef.current = 0;
             detectedFramesRef.current = 0;
             hasLockedRef.current = false;
-            lowEnergyHoldFramesRef.current = 0;
           }
         }
 
@@ -237,19 +228,13 @@ export function usePitchCheck(referencePitch: number = 440) {
       setError(null);
 
       if ('mediaSession' in navigator) {
-        try {
-          navigator.mediaSession.playbackState = 'playing';
-          if ('MediaMetadata' in window) {
-            navigator.mediaSession.metadata = new MediaMetadata({
-              title: '보컬 피치 분석 중',
-              artist: 'K2Sway Music Tools',
-              album: '마이크 활성화됨'
-            });
-          }
-          navigator.mediaSession.setActionHandler('pause', stop);
-        } catch {
-          // Some mobile WebViews partially implement MediaSession.
-        }
+        navigator.mediaSession.playbackState = 'playing';
+        navigator.mediaSession.metadata = new MediaMetadata({
+          title: '보컬 피치 분석 중',
+          artist: 'K2Sway Music Tools',
+          album: '마이크 활성화됨'
+        });
+        navigator.mediaSession.setActionHandler('pause', stop);
       }
     } catch (err) {
       setError('마이크 권한이 필요합니다.');
