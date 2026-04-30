@@ -36,6 +36,7 @@ export function MetronomeProvider({ children }: { children: React.ReactNode }) {
   const nextNoteTimeRef = useRef(0);
   const timerIDRef = useRef<number | null>(null);
   const beatRef = useRef(0);
+  const notificationRef = useRef<Notification | null>(null);
   
   // Refs for scheduler to avoid stale closures
   const bpmRef = useRef(bpm);
@@ -139,14 +140,43 @@ export function MetronomeProvider({ children }: { children: React.ReactNode }) {
     beatRef.current = 0;
     scheduler();
 
-    // Use Media Session API for status bar control
     if ('mediaSession' in navigator) {
-      navigator.mediaSession.metadata = new MediaMetadata({
-        title: `Metronome - ${bpmRef.current} BPM`,
-        artist: 'K2Sway Practice',
-        album: 'Rehearsal Tools'
-      });
-      navigator.mediaSession.setActionHandler('pause', stop);
+      try {
+        navigator.mediaSession.playbackState = 'playing';
+        if ('MediaMetadata' in window) {
+          navigator.mediaSession.metadata = new MediaMetadata({
+            title: `Metronome - ${bpmRef.current} BPM`,
+            artist: 'K2Sway Practice',
+            album: 'Rehearsal Tools'
+          });
+        }
+        navigator.mediaSession.setActionHandler('pause', stop);
+      } catch {
+        // Ignore partial MediaSession support cases.
+      }
+    }
+
+    if ('Notification' in window) {
+      const showNotice = () => {
+        try {
+          notificationRef.current?.close();
+          notificationRef.current = new Notification('메트로놈 동작중', {
+            body: `${bpmRef.current} BPM`,
+            tag: 'k2sway-metronome-active',
+            requireInteraction: true
+          });
+        } catch {
+          // Notification unsupported in some mobile WebViews.
+        }
+      };
+
+      if (Notification.permission === 'granted') {
+        showNotice();
+      } else if (Notification.permission === 'default') {
+        Notification.requestPermission().then(permission => {
+          if (permission === 'granted' && isPlayingRef.current) showNotice();
+        });
+      }
     }
   }, [scheduler]);
 
@@ -155,6 +185,10 @@ export function MetronomeProvider({ children }: { children: React.ReactNode }) {
     isPlayingRef.current = false;
     if (timerIDRef.current) clearTimeout(timerIDRef.current);
     if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'paused';
+    if (notificationRef.current) {
+      notificationRef.current.close();
+      notificationRef.current = null;
+    }
   }, []);
 
   const toggle = useCallback(() => {
