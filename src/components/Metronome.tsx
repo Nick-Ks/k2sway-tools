@@ -27,10 +27,10 @@ export default function Metronome() {
       {/* Header */}
       <div className="w-full flex justify-between items-center mb-6">
         <div className="flex flex-col">
-          <h2 className="text-sm font-semibold flex items-center gap-2 text-cyan-400">
+          <h2 className="text-screen-title flex items-center gap-2 text-cyan-400">
             <Zap size={16} /> 메트로놈
           </h2>
-          <p className="text-[11px] text-slate-400 font-bold uppercase tracking-widest mt-1">Metronome</p>
+          <p className="text-screen-subtitle mt-1">Metronome</p>
         </div>
         <div className="bg-slate-900 border border-slate-800 px-5 py-2.5 rounded-2xl text-[12px] font-black tracking-widest text-cyan-400">
           {timeSignature} BEAT

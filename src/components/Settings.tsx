@@ -183,11 +183,11 @@ export default function Settings() {
   return (
     <div className="flex h-full flex-col p-6 overflow-y-auto no-scrollbar gap-12 pb-32">
       <header className="pt-8 px-2">
-        <h1 className="text-4xl font-black tracking-tight text-white flex items-center gap-4">
+        <h1 className="text-screen-title text-white flex items-center gap-3">
           설정
-          <SettingsIcon className="text-cyan-400" size={32} />
+          <SettingsIcon className="text-cyan-400" size={18} />
         </h1>
-        <p className="text-slate-400 font-bold text-[12px] uppercase tracking-[0.4em] mt-2">App Configuration & Tests</p>
+        <p className="text-screen-subtitle mt-2">App Configuration & Tests</p>
       </header>
 
       <div className="flex flex-col gap-16">

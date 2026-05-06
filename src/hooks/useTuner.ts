@@ -152,7 +152,7 @@ export function useTuner(referencePitch: number = 440, profileId: string = 'chro
       const savedSensitivity = Number(localStorage.getItem('tuner_sensitivity'));
       const currentSensitivity = Number.isFinite(savedSensitivity)
         ? Math.min(0.95, Math.max(0.05, savedSensitivity))
-        : 0.12;
+        : 0.09;
       const processIntervalMs = Math.min(36, Math.max(10, Number(localStorage.getItem('tuner_process_interval_ms')) || 20));
 
       const updatePitch = () => {
@@ -173,7 +173,11 @@ export function useTuner(referencePitch: number = 440, profileId: string = 'chro
         let sum = 0;
         for (let i = 0; i < input.length; i++) sum += input[i] * input[i];
         const rms = Math.sqrt(sum / input.length);
-        const clarityGate = rms > 0.012 ? Math.max(0.03, currentSensitivity * 0.45) : currentSensitivity;
+        // Relax clarity gate for mobile environments where harmonic content/noise
+        // can keep raw clarity lower than desktop browsers.
+        const clarityGate = rms > 0.012
+          ? Math.max(0.02, currentSensitivity * 0.35)
+          : Math.max(0.04, currentSensitivity * 0.6);
         const isLowEnergy = rms < 0.01;
         let accepted = false;
 
