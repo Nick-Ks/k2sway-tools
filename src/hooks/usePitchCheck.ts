@@ -45,6 +45,7 @@ export function usePitchCheck(referencePitch: number = 440) {
   const detectedFramesRef = useRef(0);
   const hasLockedRef = useRef(false);
   const lowEnergyHoldFramesRef = useRef(0);
+  const levelEnvelopeRef = useRef(0);
 
   const isActiveRef = useRef(false);
   const oscillatorRef = useRef<OscillatorNode | null>(null);
@@ -88,6 +89,7 @@ export function usePitchCheck(referencePitch: number = 440) {
     detectedFramesRef.current = 0;
     hasLockedRef.current = false;
     lowEnergyHoldFramesRef.current = 0;
+    levelEnvelopeRef.current = 0;
 
     stopMediaSessionIndicator();
   }, []);
@@ -149,14 +151,18 @@ export function usePitchCheck(referencePitch: number = 440) {
         let sum = 0;
         for (let i = 0; i < input.length; i++) sum += input[i] * input[i];
         const rms = Math.sqrt(sum / input.length);
-        const lvl = Math.min(1, rms * 15); // Boost volume visual response
+        // Smooth and hold input level so sustained notes don't visually collapse
+        // from short-term mic fluctuations on phones.
+        levelEnvelopeRef.current = Math.max(rms, levelEnvelopeRef.current * 0.9);
+        const effectiveRms = Math.max(rms, levelEnvelopeRef.current * 0.75);
+        const lvl = Math.min(1, effectiveRms * 16);
 
         // On mobile mics, clarity can stay low even with audible input.
         // Use a lower floor and adapt by signal level so UI still reacts reliably.
-        const clarityGate = rms > 0.012
+        const clarityGate = effectiveRms > 0.012
           ? Math.max(0.02, sensitivity * 0.35)
           : Math.max(0.035, sensitivity * 0.55);
-        const isLowEnergy = rms < 0.01;
+        const isLowEnergy = effectiveRms < 0.01;
         let accepted = false;
 
         if (clarity > clarityGate && pitch > 40 && pitch < 1200) {
@@ -248,7 +254,7 @@ export function usePitchCheck(referencePitch: number = 440) {
           }
         }
         setDebugInfo({
-          rms: Number(rms.toFixed(4)),
+          rms: Number(effectiveRms.toFixed(4)),
           clarity: Number(clarity.toFixed(4)),
           gate: Number(clarityGate.toFixed(4)),
           rawPitch: Number(pitch.toFixed(2)),
