@@ -90,10 +90,10 @@ export default function PitchCheck() {
     <div className="flex h-full flex-col p-6 overflow-hidden">
       {/* 1. Header */}
       <div className="flex flex-col gap-1 px-1 mb-6">
-        <h2 className="text-sm font-semibold flex items-center gap-2 text-rose-400">
+        <h2 className="text-screen-title flex items-center gap-2 text-rose-400">
            <Mic size={16} fill="currentColor" /> 보컬 피치 체크
         </h2>
-        <p className="text-[11px] text-slate-400 font-bold uppercase tracking-widest leading-none">Vocal Pitch Analysis</p>
+        <p className="text-screen-subtitle leading-none">Vocal Pitch Analysis</p>
       </div>
 
       {/* 2. Settings Area - Collapsible Reference Tone */}

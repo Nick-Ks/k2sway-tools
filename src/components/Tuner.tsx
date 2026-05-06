@@ -75,10 +75,10 @@ export default function Tuner() {
       {/* 1. Header Row */}
       <div className="flex justify-between items-center mb-6">
          <div className="flex flex-col">
-           <h2 className="text-sm font-semibold flex items-center gap-2 text-amber-400">
+           <h2 className="text-screen-title flex items-center gap-2 text-amber-400">
              <TuningFork size={16} /> 악기 튜너
            </h2>
-           <p className="text-[11px] text-slate-400 font-bold uppercase tracking-widest mt-1">Instrument Tuner</p>
+           <p className="text-screen-subtitle mt-1">Instrument Tuner</p>
          </div>
           <div className="relative">
             <button 

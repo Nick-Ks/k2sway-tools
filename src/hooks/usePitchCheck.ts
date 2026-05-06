@@ -30,6 +30,7 @@ export function usePitchCheck(referencePitch: number = 440) {
 
   const audioContextRef = useRef<AudioContext | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
+  const sourceRef = useRef<MediaStreamAudioSourceNode | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const animationFrameRef = useRef<number | null>(null);
 
@@ -44,6 +45,7 @@ export function usePitchCheck(referencePitch: number = 440) {
   const detectedFramesRef = useRef(0);
   const hasLockedRef = useRef(false);
   const lowEnergyHoldFramesRef = useRef(0);
+  const levelEnvelopeRef = useRef(0);
 
   const isActiveRef = useRef(false);
   const oscillatorRef = useRef<OscillatorNode | null>(null);
@@ -59,6 +61,10 @@ export function usePitchCheck(referencePitch: number = 440) {
     if (analyserRef.current) {
         analyserRef.current.disconnect();
         analyserRef.current = null;
+    }
+    if (sourceRef.current) {
+      sourceRef.current.disconnect();
+      sourceRef.current = null;
     }
     if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
       if (oscillatorRef.current) {
@@ -83,6 +89,7 @@ export function usePitchCheck(referencePitch: number = 440) {
     detectedFramesRef.current = 0;
     hasLockedRef.current = false;
     lowEnergyHoldFramesRef.current = 0;
+    levelEnvelopeRef.current = 0;
 
     stopMediaSessionIndicator();
   }, []);
@@ -112,8 +119,8 @@ export function usePitchCheck(referencePitch: number = 440) {
       analyserRef.current = audioContextRef.current.createAnalyser();
       analyserRef.current.fftSize = 2048;
 
-      const source = audioContextRef.current.createMediaStreamSource(stream);
-      source.connect(analyserRef.current);
+      sourceRef.current = audioContextRef.current.createMediaStreamSource(stream);
+      sourceRef.current.connect(analyserRef.current);
 
       const detector = PitchDetector.forFloat32Array(analyserRef.current.fftSize);
       const input = new Float32Array(analyserRef.current.fftSize);
@@ -121,7 +128,7 @@ export function usePitchCheck(referencePitch: number = 440) {
       const savedSensitivity = Number(localStorage.getItem('vocal_sensitivity'));
       const sensitivity = Number.isFinite(savedSensitivity)
         ? Math.min(0.95, Math.max(0.05, savedSensitivity))
-        : 0.1;
+        : 0.08;
       const processIntervalMs = Math.min(36, Math.max(12, Number(localStorage.getItem('vocal_process_interval_ms')) || 22));
 
       const updatePitch = () => {
@@ -144,10 +151,18 @@ export function usePitchCheck(referencePitch: number = 440) {
         let sum = 0;
         for (let i = 0; i < input.length; i++) sum += input[i] * input[i];
         const rms = Math.sqrt(sum / input.length);
-        const lvl = Math.min(1, rms * 15); // Boost volume visual response
+        // Smooth and hold input level so sustained notes don't visually collapse
+        // from short-term mic fluctuations on phones.
+        levelEnvelopeRef.current = Math.max(rms, levelEnvelopeRef.current * 0.9);
+        const effectiveRms = Math.max(rms, levelEnvelopeRef.current * 0.75);
+        const lvl = Math.min(1, effectiveRms * 16);
 
-        const clarityGate = rms > 0.012 ? Math.max(0.03, sensitivity * 0.45) : sensitivity;
-        const isLowEnergy = rms < 0.01;
+        // On mobile mics, clarity can stay low even with audible input.
+        // Use a lower floor and adapt by signal level so UI still reacts reliably.
+        const clarityGate = effectiveRms > 0.012
+          ? Math.max(0.02, sensitivity * 0.35)
+          : Math.max(0.035, sensitivity * 0.55);
+        const isLowEnergy = effectiveRms < 0.01;
         let accepted = false;
 
         if (clarity > clarityGate && pitch > 40 && pitch < 1200) {
@@ -239,7 +254,7 @@ export function usePitchCheck(referencePitch: number = 440) {
           }
         }
         setDebugInfo({
-          rms: Number(rms.toFixed(4)),
+          rms: Number(effectiveRms.toFixed(4)),
           clarity: Number(clarity.toFixed(4)),
           gate: Number(clarityGate.toFixed(4)),
           rawPitch: Number(pitch.toFixed(2)),
