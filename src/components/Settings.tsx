@@ -207,7 +207,7 @@ export default function Settings() {
               <div className="grid grid-cols-3 gap-4">
                 {mState.presets.map((p, i) => (
                   <div key={i} className="flex flex-col gap-2">
-                    <span className="text-[11px] font-bold text-slate-400 uppercase ml-1">프리셋 {i+1}</span>
+                    <span className="text-ui-label normal-case tracking-tight text-slate-400 ml-1">프리셋 {i+1}</span>
                     <input 
                       type="number"
                       value={p}
@@ -235,12 +235,12 @@ export default function Settings() {
                     onChange={(e) => setLatency(Number(e.target.value))}
                     className="w-24 bg-slate-950 border border-slate-800 rounded-2xl py-3 text-lg font-black text-white text-center focus:outline-none focus:border-cyan-500 shadow-lg"
                   />
-                  <span className="text-[12px] font-bold text-slate-400">ms</span>
+                  <span className="text-ui-value text-slate-400">ms</span>
                 </div>
               </div>
 
               <div className="flex flex-col gap-4">
-                <div className="flex justify-between text-[10px] font-black text-slate-600 uppercase px-1">
+                <div className="flex justify-between text-ui-label text-slate-600 px-1">
                   <span>-300ms</span>
                   <span>0ms (기본)</span>
                   <span>+300ms</span>
@@ -255,7 +255,7 @@ export default function Settings() {
                 <button 
                   onClick={activeTest === 'metronome' ? stopAllTests : startMetronomeTest}
                   className={cn(
-                    "w-full py-4 rounded-2xl font-black text-xs transition-all flex items-center justify-center gap-2",
+                    "w-full py-4 rounded-2xl text-ui-button transition-all flex items-center justify-center gap-2",
                     activeTest === 'metronome' ? "bg-red-500/20 text-red-500 border border-red-500/30" : "bg-cyan-500 text-slate-950 shadow-lg shadow-cyan-500/10"
                   )}
                 >
@@ -269,7 +269,7 @@ export default function Settings() {
                       animate={testBeat ? { scale: 1.5, opacity: 1 } : { scale: 1, opacity: 0.3 }}
                       className="h-24 w-24 rounded-full bg-cyan-500 shadow-[0_0_40px_rgba(34,211,238,0.6)]"
                     />
-                    <span className="text-[14px] font-black text-slate-100 tracking-wider">깜빡임이 소리와 딱 맞을 때까지 바를 조절하세요</span>
+                    <span className="text-ui-value text-base text-slate-100 tracking-tight">깜빡임이 소리와 딱 맞을 때까지 바를 조절하세요</span>
                   </div>
                 )}
               </div>
@@ -303,10 +303,10 @@ export default function Settings() {
                        onChange={(e) => setTunerSensitivity(Number(e.target.value) / 100)}
                        className="w-16 bg-transparent text-xl font-black text-amber-400 text-right focus:outline-none border-b border-transparent focus:border-amber-400"
                      />
-                     <span className="text-[10px] font-bold text-slate-700">%</span>
+                     <span className="text-ui-label text-slate-700">%</span>
                   </div>
                 </div>
-                <div className="flex justify-between text-[9px] font-black text-slate-600 uppercase px-1">
+                <div className="flex justify-between text-ui-label text-slate-600 px-1">
                   <span>10% (고감도)</span>
                   <span className="text-amber-500/50">12% (기본)</span>
                   <span>99% (저감도)</span>
@@ -333,10 +333,10 @@ export default function Settings() {
                        onChange={(e) => setVocalSensitivity(Number(e.target.value) / 100)}
                        className="w-16 bg-transparent text-xl font-black text-rose-400 text-right focus:outline-none border-b border-transparent focus:border-rose-400"
                      />
-                     <span className="text-[10px] font-bold text-slate-700">%</span>
+                     <span className="text-ui-label text-slate-700">%</span>
                   </div>
                 </div>
-                <div className="flex justify-between text-[9px] font-black text-slate-600 uppercase px-1">
+                <div className="flex justify-between text-ui-label text-slate-600 px-1">
                   <span>10% (고감도)</span>
                   <span className="text-rose-500/50">10% (기본)</span>
                   <span>99% (저감도)</span>
@@ -354,7 +354,7 @@ export default function Settings() {
                 <button 
                   onClick={activeTest !== 'none' ? stopAllTests : () => startSensitivityTest('tuner')}
                   className={cn(
-                    "w-full py-5 rounded-2xl font-black text-[13px] transition-all border flex items-center justify-center gap-3",
+                    "w-full py-5 rounded-2xl text-ui-button transition-all border flex items-center justify-center gap-3",
                     activeTest !== 'none' && activeTest !== 'metronome' ? "bg-amber-500 text-slate-950 border-amber-400" : "bg-slate-950 text-amber-500 border-amber-500/30 hover:bg-slate-900"
                   )}
                 >
@@ -370,7 +370,7 @@ export default function Settings() {
                       exit={{ height: 0, opacity: 0 }}
                       className="mt-8 p-6 bg-slate-950 rounded-[2rem] border border-slate-800 flex flex-col gap-4 overflow-hidden"
                     >
-                       <div className="flex justify-between items-center text-[10px] font-black text-slate-600 uppercase tracking-widest leading-none">
+                       <div className="flex justify-between items-center text-ui-label text-slate-600 leading-none">
                          <span>현재 입력 레벨</span>
                          <span>인식 기준: {activeTest === 'tuner' ? Math.round(tunerSensitivity*100) : Math.round(vocalSensitivity*100)}%</span>
                        </div>
@@ -389,7 +389,7 @@ export default function Settings() {
                             style={{ left: `${(activeTest === 'tuner' ? tunerSensitivity : vocalSensitivity) * 100}%` }}
                           />
                        </div>
-                       <p className="text-[11px] text-slate-600 font-bold text-center tracking-tight">색상이 노란색/분홍색으로 변할 때 소리가 인식됩니다</p>
+                       <p className="text-ui-value text-slate-500 text-center tracking-tight">색상이 노란색/분홍색으로 변할 때 소리가 인식됩니다</p>
                     </motion.div>
                   )}
                 </AnimatePresence>
@@ -405,7 +405,7 @@ export default function Settings() {
                 <button
                   onClick={() => setNoteNotation('latin')}
                   className={cn(
-                    "h-14 rounded-2xl border font-black text-sm transition-all",
+                    "h-14 rounded-2xl border text-ui-button transition-all",
                     noteNotation === 'latin'
                       ? "bg-violet-500 text-white border-violet-400"
                       : "bg-slate-950 border-slate-800 text-slate-300"
@@ -416,7 +416,7 @@ export default function Settings() {
                 <button
                   onClick={() => setNoteNotation('solfege')}
                   className={cn(
-                    "h-14 rounded-2xl border font-black text-sm transition-all",
+                    "h-14 rounded-2xl border text-ui-button transition-all",
                     noteNotation === 'solfege'
                       ? "bg-violet-500 text-white border-violet-400"
                       : "bg-slate-950 border-slate-800 text-slate-300"
@@ -431,7 +431,7 @@ export default function Settings() {
             <div className="bg-slate-900/50 border border-slate-800 rounded-[2.5rem] p-8 space-y-8">
               <span className="text-label block">소리 분석 처리 간격 (튀는 현상 완화)</span>
               <div className="space-y-4">
-                <div className="flex items-center justify-between text-[12px] font-bold text-slate-300">
+                <div className="flex items-center justify-between text-ui-value text-slate-300">
                   <span>악기 튜너</span>
                   <span>{tunerProcessInterval}ms</span>
                 </div>
@@ -446,7 +446,7 @@ export default function Settings() {
                 />
               </div>
               <div className="space-y-4">
-                <div className="flex items-center justify-between text-[12px] font-bold text-slate-300">
+                <div className="flex items-center justify-between text-ui-value text-slate-300">
                   <span>보컬 피치</span>
                   <span>{vocalProcessInterval}ms</span>
                 </div>
@@ -485,7 +485,7 @@ export default function Settings() {
               <div className="space-y-6">
                 {(Object.keys(INSTRUMENT_PROFILES) as InstrumentType[]).map((type) => (
                   <div key={type} className="space-y-3">
-                     <span className="text-[11px] font-black text-slate-400 uppercase tracking-[0.3em] ml-4">{type}</span>
+                     <span className="text-ui-label tracking-[0.3em] ml-4">{type}</span>
                      <div className="grid grid-cols-1 gap-3">
                        {INSTRUMENT_PROFILES[type].map(profile => {
                          const isEnabled = enabledProfiles.includes(profile.id);
@@ -500,7 +500,7 @@ export default function Settings() {
                           >
                             <div className="flex flex-col">
                               <span className="text-base font-black">{profile.nameKo}</span>
-                              <span className="text-[10px] font-bold opacity-60 uppercase">{profile.name}</span>
+                              <span className="text-ui-label opacity-60">{profile.name}</span>
                             </div>
                             <div className={cn(
                               "h-7 w-7 rounded-xl border flex items-center justify-center transition-all",
@@ -525,8 +525,8 @@ export default function Settings() {
              <ShieldCheck size={32} className="text-emerald-500" />
            </div>
            <div className="flex flex-col gap-2">
-             <span className="text-[13px] font-black uppercase tracking-widest text-slate-100 leading-none">Privacy & Security</span>
-             <p className="text-[12px] text-slate-400 font-bold leading-relaxed">
+             <span className="text-ui-button uppercase tracking-widest text-slate-100 leading-none">Privacy & Security</span>
+             <p className="text-ui-value text-slate-400 leading-relaxed">
                모든 설정과 오디오 분석은 기기 내에서만 이루어집니다. 외부 서버 저장이나 전송이 일체 없는 안전한 도구입니다.
              </p>
            </div>

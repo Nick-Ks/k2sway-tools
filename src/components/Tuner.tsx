@@ -30,7 +30,7 @@ export default function Tuner() {
   
   const selectedProfile = allProfiles.find(p => p.id === selectedProfileId) || allProfiles[0];
   
-  const { pitchData, isActive, start, stop, error, startTone, stopTone, debugInfo } = useTuner(refPitch, selectedProfileId);
+  const { pitchData, isActive, start, stop, error, startTone, stopTone, debugInfo, inputLevel } = useTuner(refPitch, selectedProfileId);
 
   const toggle = () => {
     if (isActive) stop();
@@ -83,9 +83,9 @@ export default function Tuner() {
           <div className="relative">
             <button 
               onClick={() => setShowRefHz(!showRefHz)}
-              className="bg-slate-900 border border-amber-500/30 px-4 py-2.5 rounded-2xl text-[11px] font-black tracking-widest text-amber-400 shadow-[0_0_15px_rgba(245,158,11,0.1)] flex items-center gap-1.5 transition-all hover:bg-slate-800"
+              className="bg-slate-900 border border-amber-500/30 px-4 py-2.5 rounded-2xl text-ui-label text-amber-400 shadow-[0_0_15px_rgba(245,158,11,0.1)] flex items-center gap-1.5 transition-all hover:bg-slate-800"
             >
-              <span className="text-[9px] opacity-70 border border-amber-400/30 px-1.5 py-0.5 rounded uppercase">보정됨</span>
+              <span className="text-ui-label opacity-70 border border-amber-400/30 px-1.5 py-0.5 rounded">보정됨</span>
               A4={refPitch}Hz <ChevronDown size={14} />
             </button>
             {showRefHz && (
@@ -95,7 +95,7 @@ export default function Tuner() {
                     key={hz}
                     onClick={() => handleRefSelect(hz)}
                     className={cn(
-                      "w-full text-center px-4 py-3 text-[12px] font-black tracking-widest border-b border-slate-800 last:border-0",
+                      "w-full text-center px-4 py-3 text-ui-label border-b border-slate-800 last:border-0",
                       refPitch === hz ? "bg-amber-500 text-slate-950" : "text-slate-500 hover:bg-slate-900"
                     )}
                   >
@@ -121,8 +121,8 @@ export default function Tuner() {
                   : "bg-slate-950 border-slate-800 text-slate-300 hover:bg-slate-800"
               )}
             >
-              <span className="text-xs font-black tracking-tight leading-none text-center uppercase">{p.nameKo}</span>
-              <span className="text-[8px] font-black opacity-50 uppercase tracking-[0.1em] mt-1">{p.name}</span>
+              <span className="text-ui-button tracking-tight leading-none text-center uppercase">{p.nameKo}</span>
+              <span className="text-ui-label opacity-50 tracking-[0.1em] mt-1">{p.name}</span>
             </button>
           ))}
         </div>
@@ -132,7 +132,7 @@ export default function Tuner() {
       {selectedProfile.notes.length > 0 && (
         <div className="bento-card p-3 mb-4">
           <div className="flex flex-col gap-2">
-            <span className="text-[9px] font-black text-slate-500 uppercase tracking-[0.3em] text-center">Reference Targets</span>
+            <span className="text-ui-label tracking-[0.25em] text-center">Reference Targets</span>
             <div className="flex flex-wrap justify-center gap-2">
               {selectedProfile.notes.map((n) => {
                 const isActive = noteName + octave === n;
@@ -151,8 +151,8 @@ export default function Tuner() {
                         : "bg-slate-950 border-slate-800 text-slate-400 hover:bg-slate-800 hover:text-slate-200"
                     )}
                   >
-                    <span className="text-[11px] font-black leading-none">{getNoteLabel(refNoteName, notation)}</span>
-                    <span className="text-[9px] font-black opacity-60 leading-none mt-1">옥타브 {refOctave}</span>
+                    <span className="text-ui-label leading-none text-slate-200">{getNoteLabel(refNoteName, notation)}</span>
+                    <span className="text-ui-label opacity-60 leading-none mt-1">옥타브 {refOctave}</span>
                     <div className="absolute top-1 right-1">
                       <Volume2 size={7} className="opacity-30" />
                     </div>
@@ -240,7 +240,7 @@ export default function Tuner() {
                             )}>
                               {name}
                             </span>
-                            <span className="text-[10px] font-bold text-slate-700">{oct}</span>
+                            <span className="text-ui-label text-slate-700 normal-case">{oct}</span>
                           </div>
                           
                           {/* Intermediate tick marks */}
@@ -281,7 +281,7 @@ export default function Tuner() {
                  className="text-emerald-400 flex items-center gap-1.5"
                >
                  <CheckCircle2 size={20} />
-                 <span className="text-[14px] font-black uppercase tracking-[0.2em]">IN TUNE</span>
+                 <span className="text-ui-button uppercase tracking-[0.2em]">IN TUNE</span>
                </motion.div>
             )}
           </div>
@@ -311,7 +311,7 @@ export default function Tuner() {
                     )}>
                       {cents > 0 ? `+${cents}` : cents}
                     </span>
-                    <span className="text-[12px] font-black text-slate-500 uppercase tracking-widest mt-1">
+                    <span className="text-ui-label text-slate-500 mt-1">
                       {cents > 3 ? 'TOO HIGH' : cents < -3 ? 'TOO LOW' : 'PERFECT'}
                     </span>
                  </div>
@@ -325,13 +325,24 @@ export default function Tuner() {
       {/* 4. Footer Controls */}
       <div className="flex flex-col gap-4 mt-6">
         {error && (
-          <div className="flex items-center gap-3 p-3 bg-red-500/10 border border-red-500/20 rounded-2xl text-red-400 text-xs">
+          <div className="flex items-center gap-3 p-3 bg-red-500/10 border border-red-500/20 rounded-2xl text-red-400 text-ui-label">
             <AlertCircle size={16} />
             <p className="font-bold uppercase tracking-tight">{error}</p>
           </div>
         )}
         {isActive && (
-          <div className="px-3 py-2 rounded-xl border border-slate-800 bg-slate-950 text-[10px] font-mono text-slate-400">
+          <div className="px-3 py-2 rounded-xl border border-slate-800 bg-slate-950">
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-ui-label">Input Level</span>
+              <span className="text-ui-value">{Math.round(inputLevel * 100)}%</span>
+            </div>
+            <div className="w-full h-1.5 rounded-full bg-slate-900 overflow-hidden">
+              <div className="h-full bg-amber-400 transition-all duration-100" style={{ width: `${Math.round(inputLevel * 100)}%` }} />
+            </div>
+          </div>
+        )}
+        {isActive && (
+          <div className="px-3 py-2 rounded-xl border border-slate-800 bg-slate-950 text-ui-label font-mono text-slate-400 normal-case">
             rms:{debugInfo.rms} clarity:{debugInfo.clarity} gate:{debugInfo.gate} raw:{debugInfo.rawPitch}Hz ok:{String(debugInfo.accepted)}
           </div>
         )}
@@ -346,7 +357,7 @@ export default function Tuner() {
           )}
         >
           {isActive ? <MicOff size={32} /> : <Mic size={32} />}
-          <span className="text-xl font-black tracking-tight leading-none uppercase">
+          <span className="text-ui-button leading-none uppercase">
             {isActive ? '그만하기' : '튜닝 시작'}
           </span>
         </button>

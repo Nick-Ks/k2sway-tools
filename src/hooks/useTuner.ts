@@ -51,6 +51,7 @@ export function useTuner(referencePitch: number = 440, profileId: string = 'chro
     rawPitch: number;
     accepted: boolean;
   }>({ rms: 0, clarity: 0, gate: 0, rawPitch: 0, accepted: false });
+  const [inputLevel, setInputLevel] = useState(0);
 
   const audioContextRef = useRef<AudioContext | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
@@ -106,6 +107,7 @@ export function useTuner(referencePitch: number = 440, profileId: string = 'chro
     }
     setIsActive(false);
     setPitchData(null);
+    setInputLevel(0);
     
     // Reset buffers
     freqBufferRef.current = [];
@@ -179,6 +181,7 @@ export function useTuner(referencePitch: number = 440, profileId: string = 'chro
         // on mobile microphones while a note is still sustained.
         levelEnvelopeRef.current = Math.max(rms, levelEnvelopeRef.current * 0.9);
         const effectiveRms = Math.max(rms, levelEnvelopeRef.current * 0.75);
+        setInputLevel(prev => prev * 0.8 + Math.min(1, effectiveRms * 18) * 0.2);
         // Relax clarity gate for mobile environments where harmonic content/noise
         // can keep raw clarity lower than desktop browsers.
         const clarityGate = effectiveRms > 0.012
@@ -357,5 +360,5 @@ export function useTuner(referencePitch: number = 440, profileId: string = 'chro
     };
   }, [stopTone, stop]);
 
-  return { pitchData, isActive, start, stop, error, startTone, stopTone, debugInfo };
+  return { pitchData, isActive, start, stop, error, startTone, stopTone, debugInfo, inputLevel };
 }

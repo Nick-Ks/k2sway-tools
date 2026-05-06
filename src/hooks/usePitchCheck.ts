@@ -27,6 +27,7 @@ export function usePitchCheck(referencePitch: number = 440) {
     rawPitch: number;
     accepted: boolean;
   }>({ rms: 0, clarity: 0, gate: 0, rawPitch: 0, accepted: false });
+  const [inputLevel, setInputLevel] = useState(0);
 
   const audioContextRef = useRef<AudioContext | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
@@ -81,6 +82,7 @@ export function usePitchCheck(referencePitch: number = 440) {
     }
     setIsActive(false);
     setPitchData(null);
+    setInputLevel(0);
     
     freqBufferRef.current = [];
     stableFreqRef.current = 0;
@@ -156,6 +158,7 @@ export function usePitchCheck(referencePitch: number = 440) {
         levelEnvelopeRef.current = Math.max(rms, levelEnvelopeRef.current * 0.9);
         const effectiveRms = Math.max(rms, levelEnvelopeRef.current * 0.75);
         const lvl = Math.min(1, effectiveRms * 16);
+        setInputLevel(prev => prev * 0.78 + Math.min(1, effectiveRms * 18) * 0.22);
 
         // On mobile mics, clarity can stay low even with audible input.
         // Use a lower floor and adapt by signal level so UI still reacts reliably.
@@ -337,5 +340,5 @@ export function usePitchCheck(referencePitch: number = 440) {
     };
   }, [stop]);
 
-  return { pitchData, history, isActive, start, stop, error, startReferenceNote, stopReferenceNote, debugInfo };
+  return { pitchData, history, isActive, start, stop, error, startReferenceNote, stopReferenceNote, debugInfo, inputLevel };
 }
