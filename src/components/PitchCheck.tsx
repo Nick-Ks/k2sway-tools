@@ -21,7 +21,8 @@ export default function PitchCheck() {
     start, 
     stop, 
     startReferenceNote, 
-    stopReferenceNote 
+    stopReferenceNote,
+    debugInfo
   } = usePitchCheck(refPitch);
 
   const [vocalRange, setVocalRange] = useState<{ 
@@ -294,6 +295,11 @@ export default function PitchCheck() {
 
       {/* 5. Footer Controls */}
       <div className="mt-auto">
+        {isActive && (
+          <div className="mb-3 px-3 py-2 rounded-xl border border-slate-800 bg-slate-950 text-[10px] font-mono text-slate-400">
+            rms:{debugInfo.rms} clarity:{debugInfo.clarity} gate:{debugInfo.gate} raw:{debugInfo.rawPitch}Hz ok:{String(debugInfo.accepted)}
+          </div>
+        )}
         <button
           onClick={toggle}
           className={cn(

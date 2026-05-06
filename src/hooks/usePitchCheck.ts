@@ -19,6 +19,13 @@ export function usePitchCheck(referencePitch: number = 440) {
   const [history, setHistory] = useState<number[]>([]);
   const [isActive, setIsActive] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [debugInfo, setDebugInfo] = useState<{
+    rms: number;
+    clarity: number;
+    gate: number;
+    rawPitch: number;
+    accepted: boolean;
+  }>({ rms: 0, clarity: 0, gate: 0, rawPitch: 0, accepted: false });
 
   const audioContextRef = useRef<AudioContext | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
@@ -140,8 +147,10 @@ export function usePitchCheck(referencePitch: number = 440) {
 
         const clarityGate = rms > 0.012 ? Math.max(0.03, sensitivity * 0.45) : sensitivity;
         const isLowEnergy = rms < 0.01;
+        let accepted = false;
 
         if (clarity > clarityGate && pitch > 40 && pitch < 1200) {
+          accepted = true;
           silenceCountRef.current = 0;
           if (isLowEnergy && hasLockedRef.current) {
             lowEnergyHoldFramesRef.current++;
@@ -228,6 +237,13 @@ export function usePitchCheck(referencePitch: number = 440) {
             lowEnergyHoldFramesRef.current = 0;
           }
         }
+        setDebugInfo({
+          rms: Number(rms.toFixed(4)),
+          clarity: Number(clarity.toFixed(4)),
+          gate: Number(clarityGate.toFixed(4)),
+          rawPitch: Number(pitch.toFixed(2)),
+          accepted
+        });
 
         animationFrameRef.current = requestAnimationFrame(updatePitch);
       };
@@ -305,5 +321,5 @@ export function usePitchCheck(referencePitch: number = 440) {
     };
   }, [stop]);
 
-  return { pitchData, history, isActive, start, stop, error, startReferenceNote, stopReferenceNote };
+  return { pitchData, history, isActive, start, stop, error, startReferenceNote, stopReferenceNote, debugInfo };
 }

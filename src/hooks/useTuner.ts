@@ -43,6 +43,13 @@ export function useTuner(referencePitch: number = 440, profileId: string = 'chro
   } | null>(null);
   const [isActive, setIsActive] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [debugInfo, setDebugInfo] = useState<{
+    rms: number;
+    clarity: number;
+    gate: number;
+    rawPitch: number;
+    accepted: boolean;
+  }>({ rms: 0, clarity: 0, gate: 0, rawPitch: 0, accepted: false });
 
   const audioContextRef = useRef<AudioContext | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
@@ -167,8 +174,10 @@ export function useTuner(referencePitch: number = 440, profileId: string = 'chro
         const rms = Math.sqrt(sum / input.length);
         const clarityGate = rms > 0.012 ? Math.max(0.03, currentSensitivity * 0.45) : currentSensitivity;
         const isLowEnergy = rms < 0.01;
+        let accepted = false;
 
         if (clarity > clarityGate && pitch > 15 && pitch < 2500) {
+          accepted = true;
           silenceCountRef.current = 0;
           if (isLowEnergy && hasLockedRef.current) {
             lowEnergyHoldFramesRef.current++;
@@ -257,6 +266,13 @@ export function useTuner(referencePitch: number = 440, profileId: string = 'chro
             lastStrongFreqRef.current = 0;
           }
         }
+        setDebugInfo({
+          rms: Number(rms.toFixed(4)),
+          clarity: Number(clarity.toFixed(4)),
+          gate: Number(clarityGate.toFixed(4)),
+          rawPitch: Number(pitch.toFixed(2)),
+          accepted
+        });
         
         animationFrameRef.current = requestAnimationFrame(updatePitch);
       };
@@ -330,5 +346,5 @@ export function useTuner(referencePitch: number = 440, profileId: string = 'chro
     };
   }, [stopTone, stop]);
 
-  return { pitchData, isActive, start, stop, error, startTone, stopTone };
+  return { pitchData, isActive, start, stop, error, startTone, stopTone, debugInfo };
 }

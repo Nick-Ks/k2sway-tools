@@ -30,7 +30,7 @@ export default function Tuner() {
   
   const selectedProfile = allProfiles.find(p => p.id === selectedProfileId) || allProfiles[0];
   
-  const { pitchData, isActive, start, stop, error, startTone, stopTone } = useTuner(refPitch, selectedProfileId);
+  const { pitchData, isActive, start, stop, error, startTone, stopTone, debugInfo } = useTuner(refPitch, selectedProfileId);
 
   const toggle = () => {
     if (isActive) stop();
@@ -328,6 +328,11 @@ export default function Tuner() {
           <div className="flex items-center gap-3 p-3 bg-red-500/10 border border-red-500/20 rounded-2xl text-red-400 text-xs">
             <AlertCircle size={16} />
             <p className="font-bold uppercase tracking-tight">{error}</p>
+          </div>
+        )}
+        {isActive && (
+          <div className="px-3 py-2 rounded-xl border border-slate-800 bg-slate-950 text-[10px] font-mono text-slate-400">
+            rms:{debugInfo.rms} clarity:{debugInfo.clarity} gate:{debugInfo.gate} raw:{debugInfo.rawPitch}Hz ok:{String(debugInfo.accepted)}
           </div>
         )}
 
