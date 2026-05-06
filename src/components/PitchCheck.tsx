@@ -22,7 +22,8 @@ export default function PitchCheck() {
     stop, 
     startReferenceNote, 
     stopReferenceNote,
-    debugInfo
+    debugInfo,
+    inputLevel
   } = usePitchCheck(refPitch);
 
   const [vocalRange, setVocalRange] = useState<{ 
@@ -90,10 +91,10 @@ export default function PitchCheck() {
     <div className="flex h-full flex-col p-6 overflow-hidden">
       {/* 1. Header */}
       <div className="flex flex-col gap-1 px-1 mb-6">
-        <h2 className="text-sm font-semibold flex items-center gap-2 text-rose-400">
+        <h2 className="text-screen-title flex items-center gap-2 text-rose-400">
            <Mic size={16} fill="currentColor" /> 보컬 피치 체크
         </h2>
-        <p className="text-[11px] text-slate-400 font-bold uppercase tracking-widest leading-none">Vocal Pitch Analysis</p>
+        <p className="text-screen-subtitle leading-none">Vocal Pitch Analysis</p>
       </div>
 
       {/* 2. Settings Area - Collapsible Reference Tone */}
@@ -104,7 +105,7 @@ export default function PitchCheck() {
         >
           <div className="flex items-center gap-3">
             <Volume2 size={18} className="text-rose-400" />
-            <span className="text-[12px] font-black uppercase tracking-[0.2em] text-slate-100">Reference Tone</span>
+            <span className="text-ui-label text-slate-100 tracking-[0.2em]">Reference Tone</span>
           </div>
           {isRefOpen ? <ChevronUp size={20} className="text-slate-400" /> : <ChevronDown size={20} className="text-slate-400" />}
         </button>
@@ -124,7 +125,7 @@ export default function PitchCheck() {
                       key={o}
                       onClick={() => setSelectedOctave(o)}
                       className={cn(
-                        "flex-1 h-12 text-xs font-black rounded-xl transition-all border",
+                        "flex-1 h-12 text-ui-button rounded-xl transition-all border",
                         selectedOctave === o 
                           ? "bg-rose-500 text-white border-rose-400 shadow-[0_0_15px_rgba(244,63,94,0.3)]" 
                           : "bg-transparent text-slate-500 border-transparent hover:text-slate-300"
@@ -149,8 +150,8 @@ export default function PitchCheck() {
                           : "bg-slate-950 border-slate-900 text-slate-400 hover:bg-slate-800"
                       )}
                     >
-                      <span className="text-sm font-black leading-none">{getNoteLabel(n, notation)}</span>
-                      <span className="text-[9px] font-black opacity-60 mt-1.5">옥타브 {selectedOctave}</span>
+                      <span className="text-ui-button leading-none">{getNoteLabel(n, notation)}</span>
+                      <span className="text-ui-label opacity-60 mt-1.5">옥타브 {selectedOctave}</span>
                     </button>
                   ))}
                 </div>
@@ -164,27 +165,27 @@ export default function PitchCheck() {
       <div className="bento-card p-4 mb-4">
          <div className="grid grid-cols-2 gap-3">
             <div className="flex flex-col gap-1 p-3 bg-slate-950 rounded-[1.5rem] border border-slate-900 border-dashed">
-               <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest leading-none">Lowest Note</span>
+               <span className="text-ui-label text-slate-500 leading-none">Lowest Note</span>
                {vocalRange ? (
                  <div className="flex items-center">
                     <span className="text-2xl font-black text-rose-400">
-                      {getNoteLabel(vocalRange.low.name, notation)}<span className="text-sm opacity-70 ml-1">옥타브 {vocalRange.low.octave}</span>
+                      {getNoteLabel(vocalRange.low.name, notation)}<span className="text-ui-value opacity-70 ml-1">옥타브 {vocalRange.low.octave}</span>
                     </span>
                  </div>
                ) : (
-                 <span className="text-sm font-black text-slate-800 italic uppercase tracking-tighter">None</span>
+                 <span className="text-ui-button text-slate-800 italic uppercase tracking-tighter">None</span>
                )}
             </div>
             <div className="flex flex-col gap-1 p-3 bg-slate-950 rounded-[1.5rem] border border-slate-900 border-dashed">
-               <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest leading-none">Highest Note</span>
+               <span className="text-ui-label text-slate-500 leading-none">Highest Note</span>
                {vocalRange ? (
                  <div className="flex items-center">
                     <span className="text-2xl font-black text-sky-400">
-                      {getNoteLabel(vocalRange.high.name, notation)}<span className="text-sm opacity-70 ml-1">옥타브 {vocalRange.high.octave}</span>
+                      {getNoteLabel(vocalRange.high.name, notation)}<span className="text-ui-value opacity-70 ml-1">옥타브 {vocalRange.high.octave}</span>
                     </span>
                  </div>
                ) : (
-                 <span className="text-sm font-black text-slate-800 italic uppercase tracking-tighter">None</span>
+                 <span className="text-ui-button text-slate-800 italic uppercase tracking-tighter">None</span>
                )}
             </div>
          </div>
@@ -206,8 +207,13 @@ export default function PitchCheck() {
           {/* Analysis indicator */}
           <div className="absolute top-4 left-1/2 -translate-x-1/2 flex items-center gap-2 z-10">
             <div className={cn("h-1.5 w-1.5 rounded-full", isActive ? "bg-emerald-400 animate-pulse shadow-[0_0_10px_#10b981]" : "bg-slate-900")} />
-            <span className="text-[9px] font-black text-slate-800 uppercase tracking-widest leading-none">Vocal Tracking</span>
+            <span className="text-ui-label text-slate-700 leading-none">Vocal Tracking</span>
           </div>
+          {isActive && (
+            <div className="absolute top-9 left-1/2 -translate-x-1/2 w-40 h-1.5 rounded-full bg-slate-900 overflow-hidden">
+              <div className="h-full bg-rose-400 transition-all duration-100" style={{ width: `${Math.round(inputLevel * 100)}%` }} />
+            </div>
+          )}
 
           {/* Scrolling Scale */}
           <div className="w-full relative h-24 flex items-center justify-center overflow-hidden mb-2 px-4 z-10">
@@ -248,7 +254,7 @@ export default function PitchCheck() {
                           <div className={cn("h-12 w-[1.5px]", midi === currentMidi ? "bg-white" : "bg-slate-800")} />
                           <div className="flex flex-col items-center mt-2 px-2">
                              <span className={cn("text-lg font-black", midi === currentMidi ? "text-white" : "text-slate-600")}>{name}</span>
-                             <span className="text-[9px] font-bold text-slate-800">{oct}</span>
+                             <span className="text-ui-label text-slate-700 normal-case">{oct}</span>
                           </div>
                         </motion.div>
                       );
@@ -257,7 +263,7 @@ export default function PitchCheck() {
                 </div>
               </div>
             ) : (
-              <div className="text-slate-900 font-bold italic tracking-widest text-[10px] uppercase opacity-20">Analyzing...</div>
+              <div className="text-ui-label text-slate-800 italic opacity-30">Analyzing...</div>
             )}
           </div>
 
@@ -274,7 +280,7 @@ export default function PitchCheck() {
               >
                 {displayNoteName}
               </motion.span>
-              <span className="text-xl font-bold text-rose-500/80">옥타브 {octave}</span>
+              <span className="text-ui-value text-lg text-rose-600">옥타브 {octave}</span>
             </div>
 
             <div className="h-8 flex flex-col items-center justify-center">
@@ -296,7 +302,7 @@ export default function PitchCheck() {
       {/* 5. Footer Controls */}
       <div className="mt-auto">
         {isActive && (
-          <div className="mb-3 px-3 py-2 rounded-xl border border-slate-800 bg-slate-950 text-[10px] font-mono text-slate-400">
+          <div className="mb-3 px-3 py-2 rounded-xl border border-slate-800 bg-slate-950 text-ui-label font-mono text-slate-400 normal-case">
             rms:{debugInfo.rms} clarity:{debugInfo.clarity} gate:{debugInfo.gate} raw:{debugInfo.rawPitch}Hz ok:{String(debugInfo.accepted)}
           </div>
         )}
@@ -311,7 +317,7 @@ export default function PitchCheck() {
         >
           {isActive ? <MicOff size={28} /> : <Mic size={28} className="group-hover:scale-110 transition-transform" />}
           <div className="flex flex-col items-center leading-none mt-1">
-            <span className="text-lg font-black tracking-tight uppercase">{isActive ? '분석 중지' : '분석 시작'}</span>
+            <span className="text-ui-button uppercase">{isActive ? '분석 중지' : '분석 시작'}</span>
           </div>
         </button>
       </div>

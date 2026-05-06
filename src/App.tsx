@@ -48,7 +48,7 @@ export default function App() {
 
   return (
     <MetronomeProvider>
-      <div className="flex h-screen w-full flex-col bg-slate-950 font-sans text-slate-100 overflow-hidden">
+      <div className="flex h-screen w-full flex-col font-sans text-slate-900 overflow-hidden">
         {/* Status Bar Spacer (Safe Area) */}
         <div className="h-safe-top" />
 
@@ -69,7 +69,7 @@ export default function App() {
         </main>
 
         {/* Bottom Navigation */}
-        <nav className="z-50 flex h-20 w-full items-center justify-around bg-slate-950/80 backdrop-blur-md pb-safe-bottom px-4">
+        <nav className="z-50 flex h-20 w-full items-center justify-around bg-white/80 backdrop-blur-md border-t border-sky-100 pb-safe-bottom px-4">
           {navItems.map((item) => {
             const Icon = item.icon;
             const isActive = activeTool === item.id;
@@ -80,7 +80,7 @@ export default function App() {
                 onClick={() => setActiveTool(item.id as ToolType)}
                 className={cn(
                   "group relative flex flex-col items-center justify-center gap-1 min-w-[72px] transition-colors",
-                  isActive ? "text-cyan-400" : "text-slate-500 hover:text-slate-300"
+                  isActive ? "text-cyan-600" : "text-slate-400 hover:text-slate-700"
                 )}
               >
                 <div className={cn(
