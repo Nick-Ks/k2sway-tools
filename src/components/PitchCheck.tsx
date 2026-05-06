@@ -21,7 +21,8 @@ export default function PitchCheck() {
     start, 
     stop, 
     startReferenceNote, 
-    stopReferenceNote 
+    stopReferenceNote,
+    debugInfo
   } = usePitchCheck(refPitch);
 
   const [vocalRange, setVocalRange] = useState<{ 
@@ -167,7 +168,7 @@ export default function PitchCheck() {
                {vocalRange ? (
                  <div className="flex items-center">
                     <span className="text-2xl font-black text-rose-400">
-                      {getNoteLabel(vocalRange.low.name, notation)}<span className="text-sm opacity-70 ml-1">옥타브 {vocalRange.low.oct}</span>
+                      {getNoteLabel(vocalRange.low.name, notation)}<span className="text-sm opacity-70 ml-1">옥타브 {vocalRange.low.octave}</span>
                     </span>
                  </div>
                ) : (
@@ -179,7 +180,7 @@ export default function PitchCheck() {
                {vocalRange ? (
                  <div className="flex items-center">
                     <span className="text-2xl font-black text-sky-400">
-                      {getNoteLabel(vocalRange.high.name, notation)}<span className="text-sm opacity-70 ml-1">옥타브 {vocalRange.high.oct}</span>
+                      {getNoteLabel(vocalRange.high.name, notation)}<span className="text-sm opacity-70 ml-1">옥타브 {vocalRange.high.octave}</span>
                     </span>
                  </div>
                ) : (
@@ -294,6 +295,11 @@ export default function PitchCheck() {
 
       {/* 5. Footer Controls */}
       <div className="mt-auto">
+        {isActive && (
+          <div className="mb-3 px-3 py-2 rounded-xl border border-slate-800 bg-slate-950 text-[10px] font-mono text-slate-400">
+            rms:{debugInfo.rms} clarity:{debugInfo.clarity} gate:{debugInfo.gate} raw:{debugInfo.rawPitch}Hz ok:{String(debugInfo.accepted)}
+          </div>
+        )}
         <button
           onClick={toggle}
           className={cn(

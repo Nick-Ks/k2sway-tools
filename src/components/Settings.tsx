@@ -12,8 +12,8 @@ import { motion, AnimatePresence } from 'motion/react';
 
 export default function Settings() {
   const { state: mState, setPresets: setMetronomePresets } = useMetronomeContext();
-  const [tunerSensitivity, setTunerSensitivity] = useState(() => Number(localStorage.getItem('tuner_sensitivity')) || 0.25);
-  const [vocalSensitivity, setVocalSensitivity] = useState(() => Number(localStorage.getItem('vocal_sensitivity')) || 0.22);
+  const [tunerSensitivity, setTunerSensitivity] = useState(() => Number(localStorage.getItem('tuner_sensitivity')) || 0.12);
+  const [vocalSensitivity, setVocalSensitivity] = useState(() => Number(localStorage.getItem('vocal_sensitivity')) || 0.10);
   const [refPresets, setRefPresets] = useState<number[]>(() => {
     const saved = localStorage.getItem('ref_presets');
     return saved ? JSON.parse(saved) : [432, 440, 442, 444];
@@ -27,8 +27,8 @@ export default function Settings() {
     const saved = localStorage.getItem('note_notation');
     return saved === 'solfege' ? 'solfege' : 'latin';
   });
-  const [tunerProcessInterval, setTunerProcessInterval] = useState(() => Number(localStorage.getItem('tuner_process_interval_ms')) || 40);
-  const [vocalProcessInterval, setVocalProcessInterval] = useState(() => Number(localStorage.getItem('vocal_process_interval_ms')) || 45);
+  const [tunerProcessInterval, setTunerProcessInterval] = useState(() => Number(localStorage.getItem('tuner_process_interval_ms')) || 20);
+  const [vocalProcessInterval, setVocalProcessInterval] = useState(() => Number(localStorage.getItem('vocal_process_interval_ms')) || 22);
 
   const [activeTest, setActiveTest] = useState<'none' | 'metronome' | 'tuner' | 'vocal'>('none');
   const activeTestRef = useRef(activeTest);
@@ -308,7 +308,7 @@ export default function Settings() {
                 </div>
                 <div className="flex justify-between text-[9px] font-black text-slate-600 uppercase px-1">
                   <span>10% (고감도)</span>
-                  <span className="text-amber-500/50">25% (기본)</span>
+                  <span className="text-amber-500/50">12% (기본)</span>
                   <span>99% (저감도)</span>
                 </div>
                 <input 
@@ -338,7 +338,7 @@ export default function Settings() {
                 </div>
                 <div className="flex justify-between text-[9px] font-black text-slate-600 uppercase px-1">
                   <span>10% (고감도)</span>
-                  <span className="text-rose-500/50">22% (기본)</span>
+                  <span className="text-rose-500/50">10% (기본)</span>
                   <span>99% (저감도)</span>
                 </div>
                 <input 
@@ -437,8 +437,8 @@ export default function Settings() {
                 </div>
                 <input
                   type="range"
-                  min="16"
-                  max="120"
+                  min="10"
+                  max="36"
                   step="1"
                   value={tunerProcessInterval}
                   onChange={(e) => setTunerProcessInterval(Number(e.target.value))}
@@ -452,8 +452,8 @@ export default function Settings() {
                 </div>
                 <input
                   type="range"
-                  min="16"
-                  max="120"
+                  min="12"
+                  max="36"
                   step="1"
                   value={vocalProcessInterval}
                   onChange={(e) => setVocalProcessInterval(Number(e.target.value))}

@@ -142,13 +142,42 @@ export function MetronomeProvider({ children }: { children: React.ReactNode }) {
     scheduler();
 
     if ('mediaSession' in navigator) {
-      navigator.mediaSession.playbackState = 'playing';
-      navigator.mediaSession.metadata = new MediaMetadata({
-        title: `Metronome - ${bpmRef.current} BPM`,
-        artist: 'K2Sway Practice',
-        album: 'Rehearsal Tools'
-      });
-      navigator.mediaSession.setActionHandler('pause', stop);
+      try {
+        navigator.mediaSession.playbackState = 'playing';
+        if ('MediaMetadata' in window) {
+          navigator.mediaSession.metadata = new MediaMetadata({
+            title: `Metronome - ${bpmRef.current} BPM`,
+            artist: 'K2Sway Practice',
+            album: 'Rehearsal Tools'
+          });
+        }
+        navigator.mediaSession.setActionHandler('pause', stop);
+      } catch {
+        // Ignore partial MediaSession support cases.
+      }
+    }
+
+    if ('Notification' in window) {
+      const showNotice = () => {
+        try {
+          notificationRef.current?.close();
+          notificationRef.current = new Notification('메트로놈 동작중', {
+            body: `${bpmRef.current} BPM`,
+            tag: 'k2sway-metronome-active',
+            requireInteraction: true
+          });
+        } catch {
+          // Notification unsupported in some mobile WebViews.
+        }
+      };
+
+      if (Notification.permission === 'granted') {
+        showNotice();
+      } else if (Notification.permission === 'default') {
+        Notification.requestPermission().then(permission => {
+          if (permission === 'granted' && isPlayingRef.current) showNotice();
+        });
+      }
     }
 
     if ('Notification' in window) {
@@ -175,7 +204,11 @@ export function MetronomeProvider({ children }: { children: React.ReactNode }) {
     setIsPlaying(false);
     isPlayingRef.current = false;
     if (timerIDRef.current) clearTimeout(timerIDRef.current);
-    stopMediaSessionIndicator();
+    if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'paused';
+    if (notificationRef.current) {
+      notificationRef.current.close();
+      notificationRef.current = null;
+    }
   }, []);
 
   const toggle = useCallback(() => {
