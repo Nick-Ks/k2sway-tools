@@ -280,7 +280,7 @@ export default function PitchCheck() {
               >
                 {displayNoteName}
               </motion.span>
-              <span className="text-xl font-bold text-rose-500/80">옥타브 {octave}</span>
+              <span className="text-ui-value text-lg text-rose-600">옥타브 {octave}</span>
             </div>
 
             <div className="h-8 flex flex-col items-center justify-center">

@@ -126,6 +126,7 @@ export function usePitchCheck(referencePitch: number = 440) {
 
       const detector = PitchDetector.forFloat32Array(analyserRef.current.fftSize);
       const input = new Float32Array(analyserRef.current.fftSize);
+      const levelBins = new Uint8Array(analyserRef.current.frequencyBinCount);
 
       const savedSensitivity = Number(localStorage.getItem('vocal_sensitivity'));
       const sensitivity = Number.isFinite(savedSensitivity)
@@ -147,24 +148,29 @@ export function usePitchCheck(referencePitch: number = 440) {
         lastProcessedAtRef.current = now;
 
         analyserRef.current.getFloatTimeDomainData(input);
+        analyserRef.current.getByteFrequencyData(levelBins);
         const [pitch, clarity] = detector.findPitch(input, audioContextRef.current.sampleRate);
 
         // Calculate Volume Level
         let sum = 0;
         for (let i = 0; i < input.length; i++) sum += input[i] * input[i];
         const rms = Math.sqrt(sum / input.length);
+        let freqSum = 0;
+        for (let i = 0; i < levelBins.length; i++) freqSum += levelBins[i];
+        const avgFreq = freqSum / levelBins.length;
         // Smooth and hold input level so sustained notes don't visually collapse
         // from short-term mic fluctuations on phones.
         levelEnvelopeRef.current = Math.max(rms, levelEnvelopeRef.current * 0.9);
         const effectiveRms = Math.max(rms, levelEnvelopeRef.current * 0.75);
         const lvl = Math.min(1, effectiveRms * 16);
-        setInputLevel(prev => prev * 0.78 + Math.min(1, effectiveRms * 18) * 0.22);
+        const levelFromSpectrum = Math.min(1, avgFreq / 72);
+        setInputLevel(prev => prev * 0.75 + levelFromSpectrum * 0.25);
 
         // On mobile mics, clarity can stay low even with audible input.
         // Use a lower floor and adapt by signal level so UI still reacts reliably.
-        const clarityGate = effectiveRms > 0.012
-          ? Math.max(0.02, sensitivity * 0.35)
-          : Math.max(0.035, sensitivity * 0.55);
+        const clarityGate = effectiveRms > 0.01
+          ? Math.max(0.012, sensitivity * 0.22)
+          : Math.max(0.02, sensitivity * 0.35);
         const isLowEnergy = effectiveRms < 0.01;
         let accepted = false;
 

@@ -36,7 +36,8 @@
   }
 
   body {
-    @apply bg-slate-950 text-slate-100 antialiased;
+    @apply text-slate-900 antialiased;
+    background: #f5f9ff;
     touch-action: manipulation;
     font-size: 16px; /* Base for accessibility */
   }
@@ -55,7 +56,7 @@
 
 /* Bento Grid Specifics */
 .bento-card {
-  @apply bg-slate-900/50 border border-slate-800 rounded-3xl backdrop-blur-sm;
+  @apply bg-white border border-sky-100 rounded-3xl shadow-[0_4px_14px_rgba(2,132,199,0.08)];
 }
 
 .knob-track {

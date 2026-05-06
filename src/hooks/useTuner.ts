@@ -152,6 +152,7 @@ export function useTuner(referencePitch: number = 440, profileId: string = 'chro
 
       const detector = PitchDetector.forFloat32Array(analyserRef.current.fftSize);
       const input = new Float32Array(analyserRef.current.fftSize);
+      const levelBins = new Uint8Array(analyserRef.current.frequencyBinCount);
 
       const savedSensitivity = Number(localStorage.getItem('tuner_sensitivity'));
       const currentSensitivity = Number.isFinite(savedSensitivity)
@@ -173,20 +174,25 @@ export function useTuner(referencePitch: number = 440, profileId: string = 'chro
         lastProcessedAtRef.current = now;
 
         analyserRef.current.getFloatTimeDomainData(input);
+        analyserRef.current.getByteFrequencyData(levelBins);
         const [pitch, clarity] = detector.findPitch(input, audioContextRef.current.sampleRate);
         let sum = 0;
         for (let i = 0; i < input.length; i++) sum += input[i] * input[i];
         const rms = Math.sqrt(sum / input.length);
+        let freqSum = 0;
+        for (let i = 0; i < levelBins.length; i++) freqSum += levelBins[i];
+        const avgFreq = freqSum / levelBins.length;
         // Smooth and hold level envelope to avoid "active then sudden drop" behavior
         // on mobile microphones while a note is still sustained.
         levelEnvelopeRef.current = Math.max(rms, levelEnvelopeRef.current * 0.9);
         const effectiveRms = Math.max(rms, levelEnvelopeRef.current * 0.75);
-        setInputLevel(prev => prev * 0.8 + Math.min(1, effectiveRms * 18) * 0.2);
+        const levelFromSpectrum = Math.min(1, avgFreq / 72);
+        setInputLevel(prev => prev * 0.75 + levelFromSpectrum * 0.25);
         // Relax clarity gate for mobile environments where harmonic content/noise
         // can keep raw clarity lower than desktop browsers.
-        const clarityGate = effectiveRms > 0.012
-          ? Math.max(0.02, currentSensitivity * 0.35)
-          : Math.max(0.04, currentSensitivity * 0.6);
+        const clarityGate = effectiveRms > 0.01
+          ? Math.max(0.012, currentSensitivity * 0.22)
+          : Math.max(0.02, currentSensitivity * 0.35);
         const isLowEnergy = effectiveRms < 0.01;
         let accepted = false;
 

@@ -299,7 +299,7 @@ export default function Tuner() {
               >
                 {displayNoteName}
               </motion.span>
-              <span className="text-3xl font-bold text-amber-500/80">옥타브 {octave}</span>
+              <span className="text-ui-value text-xl text-amber-600">옥타브 {octave}</span>
             </div>
             
             <div className="flex flex-col items-center h-12">
