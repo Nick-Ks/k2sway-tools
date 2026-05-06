@@ -46,6 +46,8 @@
   .text-desc { @apply text-[12px] font-bold text-slate-300 leading-relaxed; }
   .text-setting-title { @apply text-lg font-black text-slate-100; }
   .text-setting-desc { @apply text-[14px] font-semibold text-slate-400 leading-relaxed; }
+  .text-screen-title { @apply text-sm font-semibold; }
+  .text-screen-subtitle { @apply text-xs font-bold uppercase tracking-widest text-slate-400; }
 }
 
 /* Bento Grid Specifics */
