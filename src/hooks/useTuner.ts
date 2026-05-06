@@ -6,6 +6,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { PitchDetector } from 'pitchy';
 import { getNoteFromFrequency } from '../lib/pitchUtils.ts';
+import { startMediaSessionIndicator, stopMediaSessionIndicator } from '../lib/mediaSession.ts';
 
 export type InstrumentType = 'chromatic' | 'guitar' | 'bass' | 'ukulele' | 'violin' | 'cello';
 
@@ -114,7 +115,7 @@ export function useTuner(referencePitch: number = 440, profileId: string = 'chro
     lowEnergyHoldFramesRef.current = 0;
     lastStrongFreqRef.current = 0;
 
-    if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'paused';
+    stopMediaSessionIndicator();
   }, []);
 
   const start = useCallback(async () => {
@@ -215,7 +216,7 @@ export function useTuner(referencePitch: number = 440, profileId: string = 'chro
 
           // 2. Median Filter (Size 5)
           freqBufferRef.current.push(pitch);
-          if (freqBufferRef.current.length > 5) freqBufferRef.current.shift();
+          if (freqBufferRef.current.length > 7) freqBufferRef.current.shift();
           
           let medianPitch = pitch;
           if (freqBufferRef.current.length >= 3) {

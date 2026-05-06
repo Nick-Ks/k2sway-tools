@@ -6,6 +6,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { PitchDetector } from 'pitchy';
 import { getNoteFromFrequency } from '../lib/pitchUtils.ts';
+import { startMediaSessionIndicator, stopMediaSessionIndicator } from '../lib/mediaSession.ts';
 
 export function usePitchCheck(referencePitch: number = 440) {
   const [pitchData, setPitchData] = useState<{
@@ -83,7 +84,7 @@ export function usePitchCheck(referencePitch: number = 440) {
     hasLockedRef.current = false;
     lowEnergyHoldFramesRef.current = 0;
 
-    if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'paused';
+    stopMediaSessionIndicator();
   }, []);
 
   const start = useCallback(async () => {
@@ -187,7 +188,7 @@ export function usePitchCheck(referencePitch: number = 440) {
 
           // 2. Median Filter
           freqBufferRef.current.push(pitch);
-          if (freqBufferRef.current.length > 5) freqBufferRef.current.shift();
+          if (freqBufferRef.current.length > 7) freqBufferRef.current.shift();
           
           let medianPitch = pitch;
           if (freqBufferRef.current.length >= 3) {

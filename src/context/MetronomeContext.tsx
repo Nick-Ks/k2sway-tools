@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useRef, useCallback, useEffect } from 'react';
+import { startMediaSessionIndicator, stopMediaSessionIndicator } from '../lib/mediaSession.ts';
 
 interface MetronomeState {
   bpm: number;
@@ -168,6 +169,25 @@ export function MetronomeProvider({ children }: { children: React.ReactNode }) {
         } catch {
           // Notification unsupported in some mobile WebViews.
         }
+      };
+
+      if (Notification.permission === 'granted') {
+        showNotice();
+      } else if (Notification.permission === 'default') {
+        Notification.requestPermission().then(permission => {
+          if (permission === 'granted' && isPlayingRef.current) showNotice();
+        });
+      }
+    }
+
+    if ('Notification' in window) {
+      const showNotice = () => {
+        notificationRef.current?.close();
+        notificationRef.current = new Notification('메트로놈 동작중', {
+          body: `${bpmRef.current} BPM`,
+          tag: 'k2sway-metronome-active',
+          requireInteraction: true
+        });
       };
 
       if (Notification.permission === 'granted') {
